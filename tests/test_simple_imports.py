@@ -1,4 +1,8 @@
-def test_simple_imports():# Third-party imports
+def test_simple_imports():
+    """This test only check if basic librep's modules can be imported
+    """
+
+    # Third-party imports
     import numpy as np
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -24,4 +28,4 @@ def test_simple_imports():# Third-party imports
     from librep.metrics.report import ClassificationReport
     from librep.transforms.resampler import SimpleResampler
 
-    pass
+    assert True
