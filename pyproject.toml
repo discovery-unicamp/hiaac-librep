@@ -23,13 +23,11 @@ dependencies = [
     "scikit-learn",
     "tqdm",
     "umap-learn",
-    "dask",
+    "matplotlib",
     "seaborn",
     "plotly",
-    "pydot",
     "pyDRMetrics",
     "gdown",
-    "matplotlib"
 ]
 
 [project.optional-dependencies]
@@ -46,7 +44,7 @@ docs = [
     "toml"
 ]
 
-tests = [
+dev = [
     "mock",
     "pytest",
     "black",

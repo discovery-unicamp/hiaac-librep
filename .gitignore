@@ -19,7 +19,6 @@
 **/old/
 **/results/**
 **/core
-**/test/**
 !**/.gitkeep
 docs/build
 librep.egg-info/
