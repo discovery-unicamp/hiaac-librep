@@ -44,7 +44,7 @@ class PandasMultiModalLoader:
     validation_file = "validation.csv"
     test_file = "test.csv"
 
-    
+
     feature_columns = ["accel-x", "accel-y", "accel-z", "gyro-x", "gyro-y", "gyro-z"]
     default_label = "activity code"
     standard_label = "standard activity code"
@@ -64,7 +64,7 @@ class PandasMultiModalLoader:
             extractor_cls=self.extractor_cls,
             checker_cls=self.checksum_cls
         )
-        self.root_dir.mkdir(exist_ok=False, parents=True)
+        self.root_dir.mkdir(exist_ok=True, parents=True)
         downloader.download_extract_check(
             url=self.url,
             destination_download_file=self.zip_filename,
@@ -241,7 +241,7 @@ class PandasMultiModalLoader:
 
 
 class KuHar_BalancedView20HzMotionSenseEquivalent(PandasMultiModalLoader):
-    url: str = "19fyh0RyH5Q1N5uimHwGr80or31EkiQaj"
+    url: str = "1501tfOYvyqjA95i_I2N_Y0XM3bvPA9Fl"
     description = (
         "KuHar Balanced View Resampled to 20HZ with classes " +
         "equivalent to MotionSense"
@@ -250,9 +250,9 @@ class KuHar_BalancedView20HzMotionSenseEquivalent(PandasMultiModalLoader):
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
     checksum_cls: Checksum = MD5Checksum
-    zip_filename = "KuHar-balanced_20Hz_motionsense_equivalent-v1.zip"
-    zip_checksum: str = "e35af827fc1153753ec6d11a4b3a4654"
-    extracted_zip_root_dir: str = "balanced_20Hz_motionsense_equivalent-v1"
+    zip_filename = "KuHar-balanced_20Hz_motionsense_equivalent.zip"
+    zip_checksum: str = "76601ec4b75e0225b2c09843adbcfed7"
+    extracted_zip_root_dir: str = "balanced_20Hz_motionsense_equivalent"
 
     train_file = "train.csv"
     validation_file = "validation.csv"
@@ -281,17 +281,17 @@ class KuHar_BalancedView20HzMotionSenseEquivalent(PandasMultiModalLoader):
 
 
 class MotionSense_BalancedView20HZ(PandasMultiModalLoader):
-    url: str = "19fyh0RyH5Q1N5uimHwGr80or31EkiQaj"
+    url: str = "1KKaTXswpsK3PaxCHzccec3LmCuKNr5VX"
     description = (
-        "MoationSense Balanced View Resampled to 20HZ"
+        "MoationSense Balanced View Resampled to 20HZ (filtered)"
     )
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
     checksum_cls: Checksum = MD5Checksum
-    zip_filename = "MotionSense-balanced_20Hz-v1.zip"
-    zip_checksum: str = "de946e65a0452421e3c716ddf3dcf57d"
-    extracted_zip_root_dir: str = "balanced_20Hz-v1"
+    zip_filename = "MotionSense-balanced_20Hz_filtered.zip"
+    zip_checksum: str = "c65703fff447cbc6cf09afc0b6a774ec"
+    extracted_zip_root_dir: str = "balanced_20Hz_filtered"
 
     train_file = "train.csv"
     validation_file = "validation.csv"
@@ -320,17 +320,17 @@ class MotionSense_BalancedView20HZ(PandasMultiModalLoader):
 
 
 class ExtraSensorySense_UnbalancedView20HZ(PandasMultiModalLoader):
-    url: str = "1xNkKw40kAy3M3zP9FA4kNZwJbA-iHoJH"
+    url: str = "1Vk2EKLwlvsePb1jx-ZMk_tczvhYpjGJv"
     description = (
-        "ExtraSensory UnBalanced View Resampled to 20HZ (train only)"
+        "ExtraSensory Unbalanced View Resampled to 20HZ (train only)"
     )
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
     checksum_cls: Checksum = MD5Checksum
-    zip_filename = "ExtraSensory-unbalanced_20Hz_train-v1.zip"
-    zip_checksum: str = "8cd977b11fee03a60344b9f8a2fb5357"
-    extracted_zip_root_dir: str = "unbalanced_20Hz_train-v1"
+    zip_filename = "ExtraSensory-unbalanced_20Hz_filtered.zip"
+    zip_checksum: str = "8d5ef2dca645165f8dcb54f88665b530"
+    extracted_zip_root_dir: str = "unbalanced_20Hz_filtered"
 
     train_file = "train.csv"
     validation_file = None
@@ -353,58 +353,18 @@ class ExtraSensorySense_UnbalancedView20HZ(PandasMultiModalLoader):
     }
 
 
-class CHARM_BalancedView20Hz(PandasMultiModalLoader):
-    url: str = "143X30U6rJL0Ffuy-CvPDOjC6NvKQiu4y"
+class WISDM_BalancedView20Hz(PandasMultiModalLoader):
+    url: str = "112IpUIRcPewVg4cFK4utAJUV8XN0MJG_"
     description = (
-        "CHARM Balanced View"
+        "WISDM Balanced View Resampled to 20Hz (filtered)"
     )
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
     checksum_cls: Checksum = MD5Checksum
-    zip_filename = "CHARM-balanced_20Hz_train_test-v2.zip"
-    zip_checksum: str = "812e5585ee6de86205c0844e07948e65"
-    extracted_zip_root_dir: str = "balanced_20Hz_train_test-v2"
-
-    train_file = "train.csv"
-    validation_file = None
-    test_file = "test.csv"
-
-    feature_columns = ["accel-x", "accel-y", "accel-z", "gyro-x", "gyro-y", "gyro-z"]
-    label = "activity code"
-    standard_label = "standard activity code"
-    activity_codes = {
-        0: "sitting on a chair",
-        1: "sitting on a couch",
-        2: "standing",
-        6: "walking",
-        7: "running",
-        8: "walking upstairs",
-        9: "walking downstairs"
-    }
-
-    standard_activity_codes = {
-        0: "sit",
-        1: "stand",
-        2: "walk",
-        3: "stair up",
-        4: "stair down",
-        5: "run"
-    }
-
-
-class WISDM_UnbalancedView20Hz(PandasMultiModalLoader):
-    url: str = "1qs6xUCBEbTl_oEIKq_KUbPZaK9NLK9FS"
-    description = (
-        "WISDM Balanced View Resampled to 20Hz"
-    )
-
-    downloader_cls: Downloader = GoogleDriveDownloader
-    extractor_cls: Extractor = ZipExtractor
-    checksum_cls: Checksum = MD5Checksum
-    zip_filename = "WISDM-unbalanced_20Hz_train_test-v1.zip"
-    zip_checksum: str = "3b689ef119546ac77722b213bf44a4e2"
-    extracted_zip_root_dir: str = "unbalanced_20Hz_train_test-v1"
+    zip_filename = "WISDM-balanced_20Hz_filtered.zip"
+    zip_checksum: str = "5a5628be4176dd3ced308f57750abca1"
+    extracted_zip_root_dir: str = "balanced_20Hz_filtered"
 
     train_file = "train.csv"
     validation_file = None
@@ -429,18 +389,55 @@ class WISDM_UnbalancedView20Hz(PandasMultiModalLoader):
     }
 
 
-class UCIHAR_UnbalancedView20Hz(PandasMultiModalLoader):
-    url: str = "1KIdwMdTA7QXnbP721ynus7eOxjwNiMaH"
+class UCIHAR_BalancedView20Hz(PandasMultiModalLoader):
+    url: str = "1wF4eGuHZr_4CIQ1CNUG8zxppD8R8AoGq"
     description = (
-        "UCI-HAR Unbalanced View Resampled to 20Hz"
+        "UCI-HAR Balanced View Resampled to 20Hz (filtered)"
     )
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
     checksum_cls: Checksum = MD5Checksum
-    zip_filename = "UCI-HAR-unbalanced_20Hz_train_test-v1.zip"
-    zip_checksum: str = "c8122d953a3116c3b92b76a2d25d7f04"
-    extracted_zip_root_dir: str = "unbalanced_20Hz_train_test-v1"
+    zip_filename = "UCI-HAR-balanced_20Hz_filtered.zip"
+    zip_checksum: str = "a4330c6453b926d2ed09902aa14ca5c2"
+    extracted_zip_root_dir: str = "balanced_20Hz_filtered"
+
+    train_file = "train.csv"
+    validation_file = "validation.csv"
+    test_file = "test.csv"
+
+    feature_columns = ["accel-x", "accel-y", "accel-z", "gyro-x", "gyro-y", "gyro-z"]
+    label = "activity code"
+    standard_label = "standard activity code"
+    activity_codes = {
+        1: "walking",
+        2: "walking upstairs",
+        3: "walking downstairs",
+        4: "sitting",
+        5: "standing"
+    }
+
+    standard_activity_codes = {
+        0: "sit",
+        1: "stand",
+        2: "walk",
+        3: "stair up",
+        4: "stair down"
+    }
+
+
+class MegaHARDataset_BalancedView20Hz(PandasMultiModalLoader):
+    url: str = "1h6CD9B8Tx3XXXLlsGaawxj_0c4eSCEPb"
+    description = (
+        "MegaHAR dataset with all views with 20Hz in a single CSV (filtered)"
+    )
+
+    downloader_cls: Downloader = GoogleDriveDownloader
+    extractor_cls: Extractor = ZipExtractor
+    checksum_cls: Checksum = MD5Checksum
+    zip_filename = "AllDatasets-balanced_20Hz_filtered.zip"
+    zip_checksum: str = "fd61630d5c97a058197af5afbcfaa408"
+    extracted_zip_root_dir: str = "balanced_20Hz_filtered"
 
     train_file = "train.csv"
     validation_file = "validation.csv"

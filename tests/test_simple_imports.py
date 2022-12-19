@@ -16,9 +16,8 @@ def test_simple_imports():
         KuHar_BalancedView20HzMotionSenseEquivalent,
         MotionSense_BalancedView20HZ,
         ExtraSensorySense_UnbalancedView20HZ,
-        CHARM_BalancedView20Hz,
-        WISDM_UnbalancedView20Hz,
-        UCIHAR_UnbalancedView20Hz
+        WISDM_BalancedView20Hz,
+        UCIHAR_BalancedView20Hz
     )
     from librep.datasets.multimodal import PandasMultiModalDataset, TransformMultiModalDataset, WindowedTransform
     from librep.transforms.fft import FFT
