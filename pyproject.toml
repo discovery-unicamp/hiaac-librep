@@ -1,0 +1,63 @@
+[build-system]
+requires      = ["setuptools>=64.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "librep"
+version = "0.0.1-dev"
+description = "HIAAC-M4 representation learning framework"
+readme = "README.md"
+authors = [{name = "Otavio Napoli", email = "otavio.napoli@gmail.com"}]
+license = {file = "LICENSE"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3"
+]
+keywords = ["librep", "representation learning", "machine learning"]
+requires-python = ">=3.8"
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "tqdm",
+    "umap-learn",
+    "dask",
+    "seaborn",
+    "plotly",
+    "pydot",
+    "pyDRMetrics",
+    "gdown",
+    "matplotlib"
+]
+
+[project.optional-dependencies]
+docs = [
+    "black",
+    "isort",
+    "ipython",
+    "sphinx",
+    "sphinx-autoapi",
+    "sphinx_rtd_theme",
+    "nbsphinx",
+    "pandoc",
+    "Ipython",
+    "toml"
+]
+
+tests = [
+    "mock",
+    "pytest",
+    "black",
+    "isort"
+]
+
+deep-learning = [
+    "torch",
+    "torchaudio"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/otavioon/hiaac-librep"
+"Bug Tracker" = "https://github.com/otavioon/hiaac-librep/issues"

@@ -1,0 +1,34 @@
+# ignore these folders
+**/.ipynb_checkpoints/
+*__pycache__*
+.vscode/
+**/build/
+**/dist/
+**/.bash_history/
+**/.cache/
+**/.ipython/
+**/.local/
+**/.jupyter/
+**/.config/
+**/.ipynb_checkpoints/
+**/.ipython/
+**/.old/
+**/.gnupg/
+**/.keras/
+**/.vscode-server/
+**/old/
+**/results/**
+**/core
+**/test/**
+!**/.gitkeep
+docs/build
+librep.egg-info/
+.librep-venv/
+
+# ignore these files
+*.pyc
+*~
+*.run.xml
+.*
+!.gitignore
+!.gitmodules
