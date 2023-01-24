@@ -444,7 +444,7 @@ class MegaHARDataset_BalancedView20Hz(PandasMultiModalLoader):
     test_file = "test.csv"
 
     feature_columns = ["accel-x", "accel-y", "accel-z", "gyro-x", "gyro-y", "gyro-z"]
-    label = "activity code"
+    label = "standard activity code"
     standard_label = "standard activity code"
     activity_codes = {
         1: "walking",
@@ -459,5 +459,7 @@ class MegaHARDataset_BalancedView20Hz(PandasMultiModalLoader):
         1: "stand",
         2: "walk",
         3: "stair up",
-        4: "stair down"
+        4: "stair down",
+        5: "run",
+        6: "stair up and down",
     }
