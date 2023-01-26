@@ -309,7 +309,14 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
     add_filter: bool
         Parameter to apply the highpass filter over data.
         If True will apply a Butteworth filter.
-
+    fs: int
+        Number to change the frequency data.
+    resampler: bool
+        Parameter to resample the signal.
+        If true it resample the signal.
+    change_acc_measure: bool
+        Parameter to change accelerometer measure.
+        If true it times acceerometer signal by 9.81.
     """
 
     def __init__(
@@ -317,12 +324,18 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
         motionsense_iterator: RawMotionSenseIterator,
         time_window: Optional[int] = None,
         window_overlap: Optional[int] = None,
-        add_gravity: bool = False,
-        add_filter: bool = True,
+        fs: int = 20,
+        resampler: bool = False,
+        change_acc_measure: bool = False,
+        add_gravity: bool = True,
+        add_filter: bool = False,
     ):
         self.motionsense_iterator = motionsense_iterator
         self.time_window = time_window
         self.window_overlap = window_overlap
+        self.fs = fs
+        self.resampler = resampler
+        self.change_acc_measure = change_acc_measure
         self.add_gravity = add_gravity
         self.add_filter = add_filter
 
@@ -377,17 +390,10 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
             data["userAcceleration.z"] = data["userAcceleration.z"] + data["gravity.z"] 
 
         # Change the accelerometer unit of measurement from g to m/s²      
-        data["userAcceleration.x"] = (data["userAcceleration.x"])*9.81
-        data["userAcceleration.y"] = (data["userAcceleration.y"])*9.81
-        data["userAcceleration.z"] = (data["userAcceleration.z"])*9.81
-        
-        # acc = [
-        #     "userAcceleration.x",
-        #     "userAcceleration.y",
-        #     "userAcceleration.z",
-        #     ]
-
-        # print(data, data['trial_code'].unique(), data['user'].unique())
+        if self.change_acc_measure is True:
+            data["userAcceleration.x"] = (data["userAcceleration.x"])*9.81
+            data["userAcceleration.y"] = (data["userAcceleration.y"])*9.81
+            data["userAcceleration.z"] = (data["userAcceleration.z"])*9.81
 
         if self.add_filter is True:
 
@@ -404,10 +410,14 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
 
         time = data.shape[0] // 50
         new_data = {column: [] for column in selected_features}
-        for column in selected_features:
-            new_data[column] = signal.resample(data[column], 20*time)
+        if self.resampler is True:
+            for column in selected_features:
+                new_data[column] = signal.resample(data[column], self.fs*time)
+            new_data = pd.DataFrame(data=new_data)
+
+        else:
+            new_data = data[selected_features].copy()
             
-        new_data = pd.DataFrame(data=new_data)
         tam = new_data.shape[0]
         new_data['activity code'] = data['activity code'].iloc[:tam]
         new_data['length'] = data['length'].iloc[:tam]
