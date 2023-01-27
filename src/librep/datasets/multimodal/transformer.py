@@ -1,19 +1,143 @@
-from typing import Tuple, List
+from typing import Optional, Tuple, List, Union
 
 import numpy as np
+import pandas as pd
 
 from librep.base.transform import Transform
 from librep.config.type_definitions import ArrayLike
 
-from .multimodal import MultiModalDataset, ArrayMultiModalDataset
+from .multimodal import MultiModalDataset, ArrayMultiModalDataset, PandasMultiModalDataset
+
+
+# Calculate multi-class dice score from two numpy matrix using scikit-learn
+
+
+def __label_selector(a, b):
+    return a
+
+
+def combine_multi_modal_datasets(
+    d1: MultiModalDataset,
+    d2: MultiModalDataset,
+    collate_fn: callable = np.hstack,
+    labels_combine: callable = __label_selector,
+):
+    new_X = collate_fn([d1[:][0], d2[:][0]])
+    new_y = [labels_combine(y1, y2) for y1, y2 in zip(d1[:][1], d2[:][1])]
+
+    last_slice_index = d1.window_slices[-1][1]
+    window_slices = d1.window_slices + [
+        (start + last_slice_index, end + last_slice_index)
+        for start, end in d2.window_slices
+    ]
+    window_names = d1.window_names + d2.window_names
+
+    return ArrayMultiModalDataset(new_X, new_y, window_slices, window_names)
+
+
+class DatasetFitter:
+    def __init__(self, transform: Transform, fit_on: Optional[Union[List[str], str]] = None, use_y: bool = False):
+        self.the_transform = transform
+        self.fit_on = fit_on
+        self.use_y = use_y
+
+    def fit(self, dataset: MultiModalDataset) -> "DatasetFitter":
+        if self.fit_on is None:
+            self.the_transform.fit(dataset[:][0], y=dataset[:][1] if self.use_y else None)
+        else:
+            X = dataset.windows(self.fit_on)[:][0]
+            print("ola:::", len(X), X.shape, X)
+            self.the_transform.fit(X)
+            print("XXXXXXX")
+        return self
+
+    def __call__(self, *args, **kwds):
+        return self.fit(*args, **kwds)
+
+class DatasetTransformer:
+    def __init__(self, transform: Transform, transform_on: Optional[Union[List[str], str]] = None, new_suffix: str = ""):
+        self.the_transform = transform
+        self.transform_on = transform_on
+        self.new_suffix = new_suffix
+
+    def transform(self, dataset: MultiModalDataset) -> ArrayMultiModalDataset:
+        if self.transform_on is None:
+            return ArrayMultiModalDataset(
+                X=self.the_transform.transform(dataset[:][0]),
+                y=dataset[:][1],
+                window_names=dataset.window_names,
+                window_slices=dataset.window_slices,
+            )
+        else:
+            return ArrayMultiModalDataset(
+                X=self.the_transform.transform(dataset.windows(self.transform_on)[:][0]),
+                y=dataset.windows(self.transform_on)[:][1],
+                window_names=[f"{self.new_suffix}{n}" for n in dataset.windows(self.transform_on).window_names],
+                window_slices=dataset.windows(self.transform_on).window_slices,
+            )
+        
+    def __call__(self, *args, **kwds):
+        return self.transform(*args, **kwds)
+
+
+class DatasetCombiner:
+    def combine(self, *datasets):
+        if len(datasets) < 2:
+            raise ValueError("At least two datasets are required to combine.")
+        dataset = datasets[0]
+        for d in datasets[1:]:
+            dataset = dataset.join(d)
+        return dataset
+
+    def __call__(self, *args, **kwds):
+        return self.combine(*args, **kwds)
+
+
+
+
+# class DatasetWindowedTransform:
+#     def __init__(   self, transform: Transform, fit_on: str = "all", transform_on: str = "window", 
+#                     keep_remaining_windows: bool = True, select_windows: Union[List[str], str] = None, 
+#                     new_suffix: str = "", combiner: callable = combine_multi_modal_datasets):
+#         self.the_transform = transform
+#         assert fit_on in ["all", "window", None]
+#         assert transform_on in ["all", "window", None]
+
+#         if select_windows is not None and isinstance(select_windows, str):
+#             self.select_windows = [select_windows]
+#         else:
+#             self.select_windows = select_windows
+#         self.new_suffix = new_suffix
+
+#     def fit(self, dataset: MultiModalDataset):
+#         if self.select_windows is None:
+#             new_set = dataset
+#         else:
+#             new_set = dataset.windows(self.select_windows)
+#         self.the_transform.fit(new_set[:][0], new_set[:][1])
+#         return self
+
+#     def transform(self, dataset: MultiModalDataset):
+#         if self.select_windows is None:
+#             new_set = dataset
+#         else:
+#             new_set = dataset.windows(self.select_windows)
+
+#         return ArrayMultiModalDataset(
+#             self.the_transform.transform(new_set[:][0]),
+#             y=new_set[:][1],
+#             window_names=[f"{self.new_suffix}{n}"  for n in new_set.window_names],
+#             window_slices=new_set.window_slices
+#         )
+
 
 class WindowedTransform:
 
     def __init__(
         self,
         transform: Transform,
-        fit_on: str = "all",  # can be window or None
-        transform_on: str = "window",
+        fit_on: str = "all",            # all, window or None
+        transform_on: str = "window",   # all, window or None
         select_windows: List[str] = None,
         keep_remaining_windows: bool = True
     ):
@@ -24,10 +148,38 @@ class WindowedTransform:
         self.keep_remaining_windows = keep_remaining_windows
 
         assert self.fit_on in ["all", "window", None]
-        assert self.transform_on in ["all", "window"]
+        assert self.transform_on in ["all", "window", None]
 
-        if self.fit_on == "window":
-            assert self.transform_on == "window"
+        # if self.fit_on == "window":
+        #     assert self.transform_on == "window" or self.transform_on is None
+
+# class DatasetTransform:
+#     def __init__(self, transform: Transform):
+#         self.transform = transform
+
+#     def fit(self, dataset: MultiModalDataset):
+#         self.transform.fit(dataset[:][0], dataset[:][1])
+#         return self
+
+#     def transform(self, dataset: MultiModalDataset):
+#         return ArrayMultiModalDataset(
+#             dataset[:][0], y=dataset[:][1],
+#             window_names=dataset.window_names,
+#             window_slices=dataset.window_slices,
+#         )
+
+# class WindowedTransform2(Transform):
+#     def __init__(self, transform: Transform, select_windows: List[str]):
+#         self.the_transform = transform
+#         self.select_windows = select_windows
+
+#     def fit(self, dataset: MultiModalDataset):
+#         new_set = dataset.windows(self.select_windows)
+#         self.the_transform.fit(new_set[:][0], new_set[:][1])
+#         return self
+
+#     def transform(self, dataset: MultiModalDataset):
+#         pass
 
 
 class TransformMultiModalDataset:
@@ -174,24 +326,3 @@ class TransformMultiModalDataset:
         return new_dataset
 
 
-def __label_selector(a, b):
-    return a
-
-
-def combine_multi_modal_datasets(
-    d1: MultiModalDataset,
-    d2: MultiModalDataset,
-    collate_fn: callable = np.hstack,
-    labels_combine: callable = __label_selector,
-):
-    new_X = collate_fn([d1[:][0], d2[:][0]])
-    new_y = [labels_combine(y1, y2) for y1, y2 in zip(d1[:][1], d2[:][1])]
-
-    last_slice_index = d1.window_slices[-1][1]
-    window_slices = d1.window_slices + [
-        (start + last_slice_index, end + last_slice_index)
-        for start, end in d2.window_slices
-    ]
-    window_names = d1.window_names + d2.window_names
-
-    return ArrayMultiModalDataset(new_X, new_y, window_slices, window_names)
