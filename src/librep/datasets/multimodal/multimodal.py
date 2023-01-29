@@ -24,7 +24,7 @@ class MultiModalDataset(Dataset):
     def windows(self, names: Union[str, List[str]]) -> "MultiModalDataset":
         raise NotImplementedError
 
-    def join(self, other: "MultiModalDataset") -> "MultiModalDataset":
+    def merge(self, other: "MultiModalDataset") -> "MultiModalDataset":
         raise NotImplementedError
 
     def concatenate(self, other: "MultiModalDataset") -> "MultiModalDataset":
@@ -88,7 +88,7 @@ class ArrayMultiModalDataset(MultiModalDataset):
             new_X, self.y, window_slices=window_slices, window_names=window_names
         )
 
-    def join(self, other: "ArrayMultiModalDataset") -> "ArrayMultiModalDataset":
+    def merge(self, other: "ArrayMultiModalDataset") -> "ArrayMultiModalDataset":
         if not isinstance(other, ArrayMultiModalDataset):
             raise ValueError("Can only join with ArrayMultiModalDataset")
 
@@ -125,12 +125,25 @@ class ArrayMultiModalDataset(MultiModalDataset):
             X, y, window_slices=self.window_slices, window_names=self.window_names
         )
 
+    @staticmethod
+    def from_pandas(other: "PandasMultiModalDataset"):
+        new_start = 0
+        slices = []
+        for start, end in other.window_slices:
+            slices.append((new_start, new_start + end - start))
+            new_start += end - start
+        return ArrayMultiModalDataset(
+            X=other[:][0],
+            y=other[:][1],
+            window_slices=slices,
+            window_names=other.window_names,
+        )
+
     def __str__(self):
-        string = str(self.X)
-        return f"{string}\nArrayMultiModalDataset: samples={len(self.X)}, shape={self.X.shape}, no. window={self.num_windows}"
+        return f"{str(self.X)}\n{repr(self)}"
 
     def __repr__(self) -> str:
-        return str(self)
+        return f"ArrayMultiModalDataset: samples={len(self.X)}, shape={self.X.shape}, no. window={self.num_windows}"
 
 
 class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
@@ -252,7 +265,7 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
             as_array=self.as_array,
         )
 
-    def join(self, other: "PandasMultiModalDataset") -> "PandasMultiModalDataset":
+    def merge(self, other: "PandasMultiModalDataset") -> "PandasMultiModalDataset":
         if not isinstance(other, PandasMultiModalDataset):
             raise ValueError("Can only join with PandasMultiModalDataset")
 
@@ -305,9 +318,11 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
             as_array=self.as_array,
         )
 
+    def get_data(self) -> pd.DataFrame:
+        return self.data[self.feature_columns]
+
     def __str__(self) -> str:
-        string = str(self.data)
-        return f"{string}\nPandasMultiModalDataset: samples={len(self.data)}, features={len(self.feature_columns)}, no. window={self.num_windows}, label_columns='{self.label_columns}'"
+        return f"{str(self.get_data())}\n{repr(self)}"
 
     def __repr__(self) -> str:
-        return str(self)
+        return f"PandasMultiModalDataset: samples={len(self.data)}, features={len(self.feature_columns)}, no. window={self.num_windows}, label_columns='{self.label_columns}'"

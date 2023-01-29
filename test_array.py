@@ -8,7 +8,6 @@ from librep.config.type_definitions import ArrayLike
 from librep.datasets.multimodal.transformer import DatasetFitter, DatasetCombiner, DatasetTransformer
 from librep.datasets.multimodal.multimodal import ArrayMultiModalDataset, PandasMultiModalDataset
 
-
 class SumTransform(Transform):
     def __init__(self):
         self.sum_val = 0
@@ -17,7 +16,7 @@ class SumTransform(Transform):
         self.sum_val = np.sum(X)
 
     def transform(self, X: ArrayLike):
-        return self.X + self.sum_val
+        return X + self.sum_val
 
     def __str__(self) -> str:
         return f"SumTransform(sum_val={self.sum_val})"
@@ -44,23 +43,51 @@ def multimodal_dataframe_2():
 dset_1 = multimodal_dataframe_1()
 print(dset_1)
 
+print("Window: accel")
+print(dset_1)
+print(dset_1.window_names)
+print(dset_1.window_slices)
+
 # dset_2 = multimodal_dataframe_2()
 # my_transform = SumTransform()
-# my_transform = UMAP(n_components=1)
+my_transform = UMAP(n_neighbors=5, n_components=2, transform_seed=42, random_state=42)
 
-# print("--------- fit")
-# fit = DatasetFitter(my_transform, fit_on=["gyro"])
-# print("----- Transform 1")
-# transform_accel = DatasetTransformer(my_transform, transform_on=["accel"])
-# print("----- Transform 2")
-# transform_gyro = DatasetTransformer(my_transform, transform_on=["gyro"])
-# print("----- Combine")
-# combine = DatasetCombiner()
+print("--------- fit")
+fit = DatasetFitter(my_transform, fit_on=["accel"])
+fit(dset_1)
+print("----- Transform 1")
+transform_accel = DatasetTransformer(my_transform, transform_on=["accel"], new_suffix="_reduced", keep_other_windows=False)
+acc_dset = transform_accel(dset_1)
+print(acc_dset)
+print(acc_dset.window_names)
+print(acc_dset.window_slices)
 
-# fit(dset_1)
-# acc_dset = transform_accel(dset_1)
-# gyro_dset = transform_gyro(dset_1)
-# dset_combined = combine(acc_dset, gyro_dset)
+print("----- Transform 2")
+transform_gyro = DatasetTransformer(my_transform, transform_on=["gyro"], new_suffix="_reduced", keep_other_windows=False)
+gyro_dset = transform_gyro(dset_1)
+print(gyro_dset)
+print(gyro_dset.window_names)
+print(gyro_dset.window_slices)
+print("----- Combine")
+combine = DatasetCombiner()
+dset_combined = combine(acc_dset, gyro_dset)
+print(dset_combined)
+print(dset_combined.window_names)
+print(dset_combined.window_slices)
+
+
+
+
+print(dset_combined)
+print(dset_combined.window_names)
+
+# print("--------- All")
+
+# transform_all = DatasetTransformer(my_transform, transform_on=None)
+# dset_combined = transform_all(dset_1)
+# print(dset_combined)
+# print(dset_combined.window_names)
+
 
 
 # print(dset_1[0][0])
@@ -97,3 +124,4 @@ print(dset_1)
 
 
 
+print("------------\n")

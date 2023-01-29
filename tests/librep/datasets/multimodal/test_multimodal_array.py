@@ -110,7 +110,7 @@ def test_dataset_concatenate(multimodal_array_1: ArrayMultiModalDataset, multimo
         multimodal_array_1.concatenate(np.arange(40).reshape(5, 8))
 
 def test_dataset_join(multimodal_array_1: ArrayMultiModalDataset, multimodal_array_1_mag: ArrayMultiModalDataset):
-    joined = multimodal_array_1.join(multimodal_array_1_mag)
+    joined = multimodal_array_1.merge(multimodal_array_1_mag)
     assert len(joined) == 5
     assert joined.X.shape == (5, 14)
     assert joined.y.shape == (5,)
@@ -137,4 +137,4 @@ def test_dataset_join(multimodal_array_1: ArrayMultiModalDataset, multimodal_arr
     assert np.all(joined[:][1] == np.arange(5))
 
     with pytest.raises(ValueError):
-        multimodal_array_1.join(np.arange(40).reshape(5, 8))
+        multimodal_array_1.merge(np.arange(40).reshape(5, 8))

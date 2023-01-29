@@ -1,4 +1,5 @@
 from typing import Optional, Tuple, List, Union
+import uuid
 
 import numpy as np
 import pandas as pd
@@ -45,34 +46,61 @@ class DatasetFitter:
         if self.fit_on is None:
             self.the_transform.fit(dataset[:][0], y=dataset[:][1] if self.use_y else None)
         else:
-            X = dataset.windows(self.fit_on)[:][0]
-            self.the_transform.fit(X)
+            dset = dataset.windows(self.fit_on)
+            self.the_transform.fit(dset[:][0], y=dset[:][1] if self.use_y else None)
         return self
 
     def __call__(self, *args, **kwds):
         return self.fit(*args, **kwds)
 
 class DatasetTransformer:
-    def __init__(self, transform: Transform, transform_on: Optional[Union[List[str], str]] = None, new_suffix: str = ""):
+    def __init__(self, transform: Transform, transform_on: Optional[Union[List[str], str]] = None, new_suffix: str = "", join_window_names: bool = True, keep_other_windows: bool = False):
         self.the_transform = transform
         self.transform_on = transform_on
         self.new_suffix = new_suffix
+        self.join_window_names = join_window_names
+        self.keep_other_windows = keep_other_windows
 
     def transform(self, dataset: MultiModalDataset) -> ArrayMultiModalDataset:
         if self.transform_on is None:
+            transformed_arr = self.the_transform.transform(dataset[:][0])
+            name = ".".join(dataset.window_names) if self.join_window_names else ""
+            name = f"{name}{self.new_suffix}"
+            if not name:
+                name = str(uuid.uuid4()[:8])
+
             return ArrayMultiModalDataset(
-                X=self.the_transform.transform(dataset[:][0]),
+                X=transformed_arr,
                 y=dataset[:][1],
-                window_names=dataset.window_names,
-                window_slices=dataset.window_slices,
+                window_names=name,
+                window_slices=[(0, transformed_arr.shape[1])]
             )
         else:
-            return ArrayMultiModalDataset(
-                X=self.the_transform.transform(dataset.windows(self.transform_on)[:][0]),
-                y=dataset.windows(self.transform_on)[:][1],
-                window_names=[f"{self.new_suffix}{n}" for n in dataset.windows(self.transform_on).window_names],
-                window_slices=dataset.windows(self.transform_on).window_slices,
+            remaining_windows = [w for w in dataset.window_names if w not in self.transform_on]
+            remaining_dataset = None
+            if self.keep_other_windows and remaining_windows:
+                if isinstance(dataset, PandasMultiModalDataset):
+                    remaining_dataset = ArrayMultiModalDataset.from_pandas(dataset.windows(remaining_windows))
+                else:
+                    remaining_dataset = dataset.windows(remaining_windows)
+            
+            arr = dataset.windows(self.transform_on)
+            transformed_arr = self.the_transform.transform(arr[:][0])
+            name = ".".join(arr.window_names) if self.join_window_names else ""
+            name = f"{name}{self.new_suffix}"
+            if not name:
+                name = str(uuid.uuid4()[:8])
+
+            arr = ArrayMultiModalDataset(
+                X=transformed_arr,
+                y=arr[:][1],
+                window_names=[name],
+                window_slices=[(0, transformed_arr.shape[1])]
             )
+            if remaining_dataset is not None:
+                return remaining_dataset.merge(arr)
+            else:
+                return arr
         
     def __call__(self, *args, **kwds):
         return self.transform(*args, **kwds)
@@ -83,13 +111,16 @@ class DatasetCombiner:
         if len(datasets) < 2:
             raise ValueError("At least two datasets are required to combine.")
         dataset = datasets[0]
+        if isinstance(dataset, PandasMultiModalDataset):
+            dataset = ArrayMultiModalDataset.from_pandas(dataset)
         for d in datasets[1:]:
-            dataset = dataset.join(d)
+            if isinstance(d, PandasMultiModalDataset):
+                d = ArrayMultiModalDataset.from_pandas(d)
+            dataset = dataset.merge(d)
         return dataset
 
     def __call__(self, *args, **kwds):
         return self.combine(*args, **kwds)
-
 
 
 
