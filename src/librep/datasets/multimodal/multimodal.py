@@ -76,7 +76,9 @@ class ArrayMultiModalDataset(MultiModalDataset):
             if name not in self.window_names:
                 raise ValueError(f"Window name {name} not found")
             the_slice = self.window_slices[self.window_names.index(name)]
-            window_slices.append((last_slice[1], the_slice[1] - the_slice[0] + last_slice[1]))
+            window_slices.append(
+                (last_slice[1], the_slice[1] - the_slice[0] + last_slice[1])
+            )
             last_slice = window_slices[-1]
             window_names.append(name)
             new_X.append(self.X[:, the_slice[0] : the_slice[1]])
@@ -124,7 +126,8 @@ class ArrayMultiModalDataset(MultiModalDataset):
         )
 
     def __str__(self):
-        return f"ArrayMultiModalDataset: samples={len(self.X)}, shape={len(self.X)}, no. window={self.num_windows}"
+        string = str(self.X)
+        return f"{string}\nArrayMultiModalDataset: samples={len(self.X)}, shape={self.X.shape}, no. window={self.num_windows}"
 
     def __repr__(self) -> str:
         return str(self)
@@ -303,7 +306,8 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
         )
 
     def __str__(self) -> str:
-        return f"PandasMultiModalDataset: samples={len(self.data)}, features={len(self.feature_columns)}, no. window={self.num_windows}, label_columns='{self.label_columns}'"
+        string = str(self.data)
+        return f"{string}\nPandasMultiModalDataset: samples={len(self.data)}, features={len(self.feature_columns)}, no. window={self.num_windows}, label_columns='{self.label_columns}'"
 
     def __repr__(self) -> str:
         return str(self)

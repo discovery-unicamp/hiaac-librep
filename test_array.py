@@ -9,20 +9,18 @@ from librep.datasets.multimodal.transformer import DatasetFitter, DatasetCombine
 from librep.datasets.multimodal.multimodal import ArrayMultiModalDataset, PandasMultiModalDataset
 
 
-class MinMaxTransform(Transform):
+class SumTransform(Transform):
     def __init__(self):
-        self.min_val = None
-        self.max_val = None
+        self.sum_val = 0
 
-    def fit(self, X: ArrayLike, y: ArrayLike):
-        self.min_val = np.min(X)
-        self.max_val = np.max(X)
+    def fit(self, X: ArrayLike, y: ArrayLike = None):
+        self.sum_val = np.sum(X)
 
     def transform(self, X: ArrayLike):
-        return (X-self.min_val)/(self.max_val)
+        return self.X + self.sum_val
 
     def __str__(self) -> str:
-        return f"My MinMax Scaler"
+        return f"SumTransform(sum_val={self.sum_val})"
 
     def __repr__(self) -> str:
         return str(self)
@@ -44,23 +42,25 @@ def multimodal_dataframe_2():
 
 
 dset_1 = multimodal_dataframe_1()
-dset_2 = multimodal_dataframe_2()
-#my_transform = MinMaxTransform()
-my_transform = UMAP(n_components=1)
+print(dset_1)
 
-print("--------- fit")
-fit = DatasetFitter(my_transform, fit_on=["gyro"])
-print("----- Transform 1")
-transform_accel = DatasetTransformer(my_transform, transform_on=["accel"])
-print("----- Transform 2")
-transform_gyro = DatasetTransformer(my_transform, transform_on=["gyro"])
-print("----- Combine")
-combine = DatasetCombiner()
+# dset_2 = multimodal_dataframe_2()
+# my_transform = SumTransform()
+# my_transform = UMAP(n_components=1)
 
-fit(dset_1)
-acc_dset = transform_accel(dset_1)
-gyro_dset = transform_gyro(dset_1)
-dset_combined = combine(acc_dset, gyro_dset)
+# print("--------- fit")
+# fit = DatasetFitter(my_transform, fit_on=["gyro"])
+# print("----- Transform 1")
+# transform_accel = DatasetTransformer(my_transform, transform_on=["accel"])
+# print("----- Transform 2")
+# transform_gyro = DatasetTransformer(my_transform, transform_on=["gyro"])
+# print("----- Combine")
+# combine = DatasetCombiner()
+
+# fit(dset_1)
+# acc_dset = transform_accel(dset_1)
+# gyro_dset = transform_gyro(dset_1)
+# dset_combined = combine(acc_dset, gyro_dset)
 
 
 # print(dset_1[0][0])

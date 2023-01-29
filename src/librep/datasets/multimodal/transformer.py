@@ -46,9 +46,7 @@ class DatasetFitter:
             self.the_transform.fit(dataset[:][0], y=dataset[:][1] if self.use_y else None)
         else:
             X = dataset.windows(self.fit_on)[:][0]
-            print("ola:::", len(X), X.shape, X)
             self.the_transform.fit(X)
-            print("XXXXXXX")
         return self
 
     def __call__(self, *args, **kwds):
