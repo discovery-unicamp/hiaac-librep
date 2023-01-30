@@ -324,7 +324,7 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
         motionsense_iterator: RawMotionSenseIterator,
         time_window: Optional[int] = None,
         window_overlap: Optional[int] = None,
-        fs: int = 20,
+        fs: int = None,
         resampler: bool = False,
         change_acc_measure: bool = False,
         add_gravity: bool = True,
@@ -348,6 +348,11 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
             assert (
                 add_gravity is True
             ), "Add filter must be true when add gravity is true"
+
+        if resampler is True:
+            assert (
+                fs is not None
+            ), "Resampler must be set when fs is set"
 
     def __create_time_series(self, data: pd.DataFrame) -> pd.DataFrame:
         """Create a time series with defined window size and overlap.
@@ -396,17 +401,16 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
             data["userAcceleration.z"] = (data["userAcceleration.z"])*9.81
 
         if self.add_filter is True:
-
+            # fs=50 because it's the original sample rate from dataset
             h = signal.butter(3, .3, 'hp', fs=50, output='sos')
 
             for axi in selected_features[-3:]:
                 sig = data[axi]
-                # zi = signal.sosfilt_zi(h) * sig[:4].mean()
                 sample_filtered = signal.sosfiltfilt(h, sig)
 
                 data[axi] = sample_filtered
                 
-        # Resampling the signal from 50Hz to 20Hz
+        # Resampling the signal from 50Hz to fs
 
         time = data.shape[0] // 50
         new_data = {column: [] for column in selected_features}
@@ -425,7 +429,7 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
         new_data['index'] = data['index'].iloc[:tam]
         new_data['user'] = data['user'].iloc[:tam]
         
-        data = new_data
+        data = new_data.copy()
         
         for i in range(0, data.shape[0], self.time_window - self.window_overlap):
             window_df = data[i : i + self.time_window]
@@ -443,7 +447,6 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
                 (
                     window_values,
                     [
-                        # acc_time[0], gyro_time[0], acc_time[1], gyro_time[1],
                         act_class,
                         length,
                         trial_code,
