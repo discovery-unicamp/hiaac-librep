@@ -2,6 +2,7 @@ import glob
 import os
 import random
 from pathlib import Path
+import shutil
 from typing import Dict, List, Optional, Tuple, Generator
 
 import numpy as np
@@ -14,6 +15,8 @@ from librep.datasets.har.generator import HARDatasetGenerator, DatasetSplitError
 
 from scipy import signal
 
+
+from librep.utils.file_ops import WgetDownload, ZipExtractor, DownloaderExtractor
 
 ##### Raw data Handlers and time series generator
 
@@ -42,6 +45,7 @@ class RawMotionSense:
 
     # Version 1 MotionSense (Device Motion Data)
     dataset_url = "https://github.com/mmalekzadeh/motion-sense/raw/master/data/A_DeviceMotion_data.zip"
+    data_path: str = "A_DeviceMotion_data"
 
     # Activity names and codes
     activity_names = {0: "dws", 1: "ups", 2: "sit", 3: "std", 4: "wlk", 5: "jog"}
@@ -61,12 +65,32 @@ class RawMotionSense:
         """
         # Create directories
         self.dataset_dir.mkdir(exist_ok=True, parents=True)
-        file_path = self.dataset_dir / "motionsense.zip"
-        download_unzip_check(
-            url=RawMotionSense.dataset_url,
-            download_destination=file_path,
-            unzip_dir=self.dataset_dir,
+
+        # Download and extract
+        downloader = DownloaderExtractor(
+            downloader_cls=WgetDownload,
+            extractor_cls=ZipExtractor,
+            checker_cls=None
         )
+        downloader.download_extract_check(
+            url=self.dataset_url,
+            destination_download_file="motionsense.zip",
+            checksum=None,
+            extract_folder=self.dataset_dir,
+            remove_downloads=True
+        )
+
+        source_path = self.dataset_dir / self.data_path
+        for file in source_path.glob("*"):
+            file.rename(self.dataset_dir / file.name)
+        source_path.rmdir()
+        
+        mac_os_X_path = self.dataset_dir / "__MACOSX"
+        shutil.rmtree(str(mac_os_X_path))
+
+        print(f"Data downloaded and extracted to {self.dataset_dir}")
+
+
 
     def __read_metadata(self) -> pd.DataFrame:
         """Iterate over dataset files and create a metadata dataframe.
