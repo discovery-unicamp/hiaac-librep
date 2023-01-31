@@ -648,7 +648,6 @@ class MotionSenseDatasetGenerator(HARDatasetGenerator):
 
         df = self.get_full_df(use_tqdm=use_tqdm)
         users = df["user"].unique()
-        print(df.shape)
         activities = df["activity code"].unique()
 
         train, validation, test = self.train_test_split(
