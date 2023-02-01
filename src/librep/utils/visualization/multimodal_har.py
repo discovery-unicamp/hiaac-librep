@@ -14,6 +14,7 @@ def plot_windows_sample(
     showlegend: bool = True,
     xaxis: str = "x",
     yaxis: str = "y",
+    return_traces_layout: bool = False
 ):
     if windows is None:
         windows = dataset.window_names
@@ -29,7 +30,10 @@ def plot_windows_sample(
         yaxis=dict(title=yaxis),
     )
 
-    return go.Figure(data=traces, layout=layout)
+    if return_traces_layout:
+        return traces, layout
+    else:
+        return go.Figure(data=traces, layout=layout)
 
 
 def plot_twin_windows_sample(
@@ -44,6 +48,7 @@ def plot_twin_windows_sample(
     y1_axis: str = "y1",
     y2_axis: str = "y2",
     the_slice: slice = slice(None, None, None),
+    return_traces_layout: bool = False
 ):
     start = 0
     traces = []
@@ -89,7 +94,10 @@ def plot_twin_windows_sample(
         )
     )
 
-    return go.Figure(data=traces, layout=layout)
+    if return_traces_layout:
+        return traces, layout
+    else:
+        return go.Figure(data=traces, layout=layout)
 
 def plot_windows_single_line(
     dataset: MultiModalDataset,
@@ -101,6 +109,7 @@ def plot_windows_single_line(
     showlegend: bool = True,
     xaxis: str = "x",
     yaxis: str = "y",
+    return_traces_layout: bool = False
 ):
     if windows is None:
             windows = dataset.window_names
@@ -125,4 +134,7 @@ def plot_windows_single_line(
         yaxis=dict(title=yaxis),
     )
 
-    return go.Figure(data=traces, layout=layout)
+    if return_traces_layout:
+        return traces, layout
+    else:
+        return go.Figure(data=traces, layout=layout)
