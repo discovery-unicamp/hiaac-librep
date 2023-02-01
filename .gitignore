@@ -31,3 +31,4 @@ librep.egg-info/
 .*
 !.gitignore
 !.gitmodules
+data
