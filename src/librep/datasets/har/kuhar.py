@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import Dict, List, Tuple, Optional, Generator
 from pathlib import Path
 import random
@@ -7,9 +8,12 @@ import numpy as np
 import pandas as pd
 import tqdm
 
-from librep.utils.file_ops import download_unzip_check
 from librep.config.type_definitions import PathLike
 from librep.datasets.har.generator import HARDatasetGenerator, DatasetSplitError
+
+from scipy import signal
+
+from librep.utils.file_ops import WgetDownload, ZipExtractor, DownloaderExtractor
 
 
 class RawKuHar:
@@ -36,6 +40,7 @@ class RawKuHar:
     """
     # Version 5 KuHar Raw
     dataset_url = "https://data.mendeley.com/public-files/datasets/45f952y38r/files/d3126562-b795-4eba-8559-310a25859cc7/file_downloaded"
+    data_path: str = "1.Raw_time_domian_data"
 
     # Activity names and codes
     activity_names = {
@@ -72,13 +77,37 @@ class RawKuHar:
 
         """
         # Create directories
+        # self.dataset_dir.mkdir(exist_ok=True, parents=True)
+        # file_path = self.dataset_dir / "kuhar.zip"
+        # download_unzip_check(
+        #     url=RawKuHar.dataset_url,
+        #     download_destination=file_path,
+        #     unzip_dir=self.dataset_dir,
+        # )
+
+        # Create directories
         self.dataset_dir.mkdir(exist_ok=True, parents=True)
-        file_path = self.dataset_dir / "kuhar.zip"
-        download_unzip_check(
-            url=RawKuHar.dataset_url,
-            download_destination=file_path,
-            unzip_dir=self.dataset_dir,
+
+        # Download and extract
+        downloader = DownloaderExtractor(
+            downloader_cls=WgetDownload,
+            extractor_cls=ZipExtractor,
+            checker_cls=None
         )
+        downloader.download_extract_check(
+            url=self.dataset_url,
+            destination_download_file="kuhar.zip",
+            checksum=None,
+            extract_folder=self.dataset_dir,
+            remove_downloads=True
+        )
+
+        source_path = self.dataset_dir / self.data_path
+        for file in source_path.glob("*"):
+            file.rename(self.dataset_dir / file.name)
+        source_path.rmdir()
+
+        print(f"Data downloaded and extracted to {self.dataset_dir}")
 
     def __read_metadata(self) -> pd.DataFrame:
         """Iterate over dataset files and create a metadata dataframe.
@@ -310,16 +339,25 @@ class KuHarDatasetGenerator(HARDatasetGenerator):
         self,
         kuhar_iterator: RawKuHarIterator,
         time_window: int = None,
-        window_overlap: int = None
+        window_overlap: int = None,
+        fs: int = None,
+        resampler: bool = False,
     ):
         self.kuhar_iterator = kuhar_iterator
         self.time_window = time_window
         self.window_overlap = window_overlap
+        self.fs = fs
+        self.resampler = resampler
 
         if window_overlap is not None:
             assert (
                 time_window is not None
             ), "Time window must be set when overlap is set"
+
+        if resampler:
+            assert (
+                fs is not None
+            ), "Resampler must be set when fs is set"
 
     def __create_time_series(self, data: pd.DataFrame) -> pd.DataFrame:
         """Create a time series with defined window size and overlap.
@@ -347,6 +385,30 @@ class KuHarDatasetGenerator(HARDatasetGenerator):
             "gyro-y",
             "gyro-z",
         ]
+
+        # Resampling the signal from 100Hz to fs
+        time = data.shape[0] // 100
+        new_data = {column: [] for column in selected_features}
+        if self.resampler:
+            for column in selected_features:
+                new_data[column] = signal.resample(data[column], self.fs*time)
+            new_data = pd.DataFrame(data=new_data)
+
+        else:
+            new_data = data[selected_features].copy()
+
+        tam = new_data.shape[0]
+        new_data["accel-start-time"] = data["accel-start-time"].iloc[:tam]
+        new_data["gyro-start-time"] = data["gyro-start-time"].iloc[:tam]
+        new_data["accel-end-time"] = data["accel-end-time"].iloc[:tam]
+        new_data["gyro-end-time"] = data["gyro-start-time"].iloc[:tam]
+        new_data['activity code'] = data['activity code'].iloc[:tam]
+        new_data['length'] = data['length'].iloc[:tam]
+        new_data['serial'] = data['serial'].iloc[:tam]
+        new_data['index'] = data['index'].iloc[:tam]
+        new_data['user'] = data['user'].iloc[:tam]
+
+        data = new_data.copy()
 
         for i in range(0, data.shape[0], self.time_window - self.window_overlap):
             window_df = data[i : i + self.time_window]
