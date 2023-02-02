@@ -50,9 +50,10 @@ dev = [
     "black",
     "isort"
 ]
-
+  
 deep-learning = [
     "torch",
+    "pytorch-lightning",
     "torchaudio"
 ]
 
