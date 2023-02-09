@@ -1,2 +1,2 @@
-from .multimodal import MultiModalDataset, ArrayMultiModalDataset, PandasMultiModalDataset
+from .multimodal import MultiModalDataset, ArrayMultiModalDataset, PandasMultiModalDataset, concat
 from .transformer import TransformMultiModalDataset, WindowedTransform, combine_multi_modal_datasets

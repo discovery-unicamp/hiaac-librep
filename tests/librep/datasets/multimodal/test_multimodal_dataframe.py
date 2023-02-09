@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from librep.datasets.multimodal.multimodal import (
-    ArrayMultiModalDataset,
     PandasMultiModalDataset,
+    concat
 )
 import pytest
 
@@ -11,7 +11,7 @@ def multimodal_dataframe_1():
     df = pd.DataFrame(np.arange(40).reshape(5, 8), columns=["accel-0", "accel-1", "accel-2", "accel-3", "gyro-0", "gyro-1", "gyro-2", "gyro-3"])
     df["label"] = ["a", "b", "c", "d", "e"]
     return PandasMultiModalDataset(
-        df, feature_prefixes=["accel", "gyro"], label_columns=["label"]
+        df, feature_prefixes=["accel", "gyro"], label_columns="label"
     )
 
 @pytest.fixture
@@ -19,7 +19,15 @@ def multimodal_dataframe_2():
     df = pd.DataFrame(np.arange(40).reshape(5, 8)*2, columns=["accel-0", "accel-1", "accel-2", "accel-3", "gyro-0", "gyro-1", "gyro-2", "gyro-3"])
     df["label"] = ["f", "g", "h", "i", "j"]
     return PandasMultiModalDataset(
-        df, feature_prefixes=["accel", "gyro"], label_columns=["label"]
+        df, feature_prefixes=["accel", "gyro"], label_columns="label"
+    )
+
+@pytest.fixture
+def multimodal_dataframe_mag():
+    df = pd.DataFrame(np.arange(30).reshape(5, 6)*-2, columns=["mag-x-0", "mag-x-1", "mag-y-0", "mag-y-1", "mag-z-0", "mag-z-1"])
+    df["label"] = ["v", "w", "x", "y", "z"]
+    return PandasMultiModalDataset(
+        df, feature_prefixes=["mag-x", "mag-y", "mag-z"], label_columns="label"
     )
 
 
@@ -30,8 +38,54 @@ def test_dataframe_window(multimodal_dataframe_1: PandasMultiModalDataset):
     ]
 
     assert np.all(multimodal_dataframe_1[0][0] == np.arange(40).reshape(5, 8)[0, 0:8])
+    assert multimodal_dataframe_1.feature_columns == ["accel-0", "accel-1", "accel-2", "accel-3", "gyro-0", "gyro-1", "gyro-2", "gyro-3"]
+    assert multimodal_dataframe_1.feature_prefixes == ["accel", "gyro"]
+    assert multimodal_dataframe_1.feature_windows[1]["prefix"] == "gyro"
+    assert multimodal_dataframe_1.feature_windows[1]["features"] == ["gyro-0", "gyro-1", "gyro-2", "gyro-3"]
+    assert multimodal_dataframe_1.feature_windows[1]["start"] == 4
+    assert multimodal_dataframe_1.feature_windows[1]["end"] == 8
+    assert multimodal_dataframe_1[1][1] == "b"
+    assert np.all(multimodal_dataframe_1[1][0] == [8, 9, 10, 11, 12, 13, 14, 15])
+    assert multimodal_dataframe_1.windows("gyro")[3][1] == "d"
+    assert np.all(multimodal_dataframe_1.windows("gyro")[3][0] == [28, 29, 30, 31])
 
 
+def test_dataframe_concat_axis_0(multimodal_dataframe_1: PandasMultiModalDataset, multimodal_dataframe_2: PandasMultiModalDataset):
+    z = concat((multimodal_dataframe_1, multimodal_dataframe_2), axis=0)
+    assert multimodal_dataframe_1.window_names == ["accel", "gyro"]
+    assert multimodal_dataframe_1.window_slices == [
+        (0, 4), (4, 8)
+    ]
+    assert z.feature_columns == ["accel-0", "accel-1", "accel-2", "accel-3", "gyro-0", "gyro-1", "gyro-2", "gyro-3"]
+    assert z.feature_prefixes == ["accel", "gyro"]
+    assert z.feature_windows[1]["prefix"] == "gyro"
+    assert z.feature_windows[1]["features"] == ["gyro-0", "gyro-1", "gyro-2", "gyro-3"]
+    assert z.feature_windows[1]["start"] == 4
+    assert z.feature_windows[1]["end"] == 8
+    assert multimodal_dataframe_1.feature_windows[1]["start"] == 4
+    assert multimodal_dataframe_1.feature_windows[1]["end"] == 8
+    assert z.data.shape == (10, 9)
+    assert np.all(z[0][0] == multimodal_dataframe_1[0][0])
+    assert np.all(z[5][0] == multimodal_dataframe_2[0][0])
+    assert np.all(z[0][1] == multimodal_dataframe_1[0][1])
+    assert np.all(z[5][1] == multimodal_dataframe_2[0][1])
+
+
+def test_dataframe_concat_axis_1(multimodal_dataframe_1: PandasMultiModalDataset, multimodal_dataframe_mag: PandasMultiModalDataset):
+    z = concat((multimodal_dataframe_1, multimodal_dataframe_mag), axis=1)
+    assert np.all(multimodal_dataframe_1.window_names == ["accel", "gyro"])
+    assert np.all(z.window_slices == [
+        (0, 4), (4, 8), (9, 11), (11, 13), (13, 15)
+    ])
+    assert np.all(z.feature_columns == ["accel-0", "accel-1", "accel-2", "accel-3", "gyro-0", "gyro-1", "gyro-2", "gyro-3", "mag-x-0", "mag-x-1", "mag-y-0", "mag-y-1", "mag-z-0", "mag-z-1"])
+    assert np.all(z.feature_prefixes == ["accel", "gyro", "mag-x", "mag-y", "mag-z"])
+    assert np.all(z.feature_windows[1]["prefix"] == "gyro")
+    assert np.all(z.feature_windows[1]["features"] == ["gyro-0", "gyro-1", "gyro-2", "gyro-3"])
+    assert z.feature_windows[1]["start"] == 4
+    assert z.feature_windows[1]["end"] == 8
+    assert np.all(multimodal_dataframe_1.feature_windows[1]["start"] == 4)
+    assert np.all(multimodal_dataframe_1.feature_windows[1]["end"] == 8)
+    assert z.data.shape == (5, 15)
 
 # def test_array_dataset_window(multimodal_array_1):
 #     assert multimodal_array_1.window_names == ["accel-0", "accel-1", "gyro-0", "gyro-1"]

@@ -234,7 +234,7 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
         super().__init__(
             dataframe,
             features_columns=to_select_features,
-            label_columns=label_columns,
+            label_columns=label_columns if isinstance(label_columns, list) else [label_columns],
             as_array=as_array,
         )
 
@@ -270,10 +270,12 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
             raise ValueError("Can only join with PandasMultiModalDataset")
 
         # Check if self.data and other.data has any column name that is equal, excluding the self.label columns..
+        label_columns = set([self.label_columns] if isinstance(self.label_columns, str) else self.label_columns)
+        other_label_columns = set([other.label_columns] if isinstance(other.label_columns, str) else other.label_columns)
         if (
             len(
-                (set(self.data.columns) - set(self.label_columns))
-                & (set(other.data.columns) - set(other.label_columns))
+                (set(self.data.columns) - label_columns)
+                & (set(other.data.columns) - other_label_columns)
             )
             > 0
         ):
@@ -281,7 +283,7 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
                 "Can only join with PandasMultiModalDataset with different column names"
             )
 
-        data = pd.concat([self.data, other.data], axis=1)
+        data = pd.concat([self.data, other.data], axis=1).reset_index(drop=True)
         feature_windows = self.feature_windows + [
             {
                 "prefix": window["prefix"],
@@ -294,10 +296,11 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
 
         dset = PandasMultiModalDataset(
             data,
-            feature_prefixes=None,
+            feature_prefixes=self.feature_prefixes+other.feature_prefixes,
             label_columns=self.label_columns,
             as_array=self.as_array,
         )
+        dset.data = dset.data.loc[:, ~dset.data.columns.duplicated()]
         dset.feature_windows = feature_windows
         dset.feature_columns = self.feature_columns + other.feature_columns
         return dset
@@ -311,7 +314,7 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
                 "Can only concatenate with PandasMultiModalDataset with same label columns"
             )
 
-        df = pd.concat([self.data, other.data], axis=0)
+        df = pd.concat([self.data, other.data], axis=0).reset_index(drop=True)
         return PandasMultiModalDataset(
             df,
             feature_prefixes=self.feature_prefixes,
