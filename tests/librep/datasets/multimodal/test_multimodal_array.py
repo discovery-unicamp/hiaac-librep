@@ -77,7 +77,7 @@ def test_array_dataset_window(multimodal_array_1: ArrayMultiModalDataset):
 
 
 def test_dataset_concatenate(multimodal_array_1: ArrayMultiModalDataset, multimodal_array_2: ArrayMultiModalDataset):
-    merged = multimodal_array_1.concatenate(multimodal_array_2)
+    merged = multimodal_array_1._concatenate(multimodal_array_2)
     assert len(merged) == 10
 
     assert merged.window_names == ["accel-0", "accel-1", "gyro-0", "gyro-1"]
@@ -107,10 +107,10 @@ def test_dataset_concatenate(multimodal_array_1: ArrayMultiModalDataset, multimo
     assert np.all(merged[:][1] == np.concatenate((np.arange(5), np.arange(5) *2)))
 
     with pytest.raises(ValueError):
-        multimodal_array_1.concatenate(np.arange(40).reshape(5, 8))
+        multimodal_array_1._concatenate(np.arange(40).reshape(5, 8))
 
 def test_dataset_join(multimodal_array_1: ArrayMultiModalDataset, multimodal_array_1_mag: ArrayMultiModalDataset):
-    joined = multimodal_array_1.merge(multimodal_array_1_mag)
+    joined = multimodal_array_1._merge(multimodal_array_1_mag)
     assert len(joined) == 5
     assert joined.X.shape == (5, 14)
     assert joined.y.shape == (5,)
@@ -137,4 +137,4 @@ def test_dataset_join(multimodal_array_1: ArrayMultiModalDataset, multimodal_arr
     assert np.all(joined[:][1] == np.arange(5))
 
     with pytest.raises(ValueError):
-        multimodal_array_1.merge(np.arange(40).reshape(5, 8))
+        multimodal_array_1._merge(np.arange(40).reshape(5, 8))

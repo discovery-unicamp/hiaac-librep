@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Union, List
+from typing import Iterable, Tuple, Optional, Union, List
 
 import numpy as np
 import pandas as pd
@@ -24,10 +24,10 @@ class MultiModalDataset(Dataset):
     def windows(self, names: Union[str, List[str]]) -> "MultiModalDataset":
         raise NotImplementedError
 
-    def merge(self, other: "MultiModalDataset") -> "MultiModalDataset":
+    def _merge(self, other: "MultiModalDataset") -> "MultiModalDataset":
         raise NotImplementedError
 
-    def concatenate(self, other: "MultiModalDataset") -> "MultiModalDataset":
+    def _concatenate(self, other: "MultiModalDataset") -> "MultiModalDataset":
         raise NotImplementedError
 
 
@@ -88,7 +88,7 @@ class ArrayMultiModalDataset(MultiModalDataset):
             new_X, self.y, window_slices=window_slices, window_names=window_names
         )
 
-    def merge(self, other: "ArrayMultiModalDataset") -> "ArrayMultiModalDataset":
+    def _merge(self, other: "ArrayMultiModalDataset") -> "ArrayMultiModalDataset":
         if not isinstance(other, ArrayMultiModalDataset):
             raise ValueError("Can only join with ArrayMultiModalDataset")
 
@@ -107,7 +107,7 @@ class ArrayMultiModalDataset(MultiModalDataset):
             X, y, window_slices=window_slices, window_names=window_names
         )
 
-    def concatenate(self, other: "ArrayMultiModalDataset") -> "ArrayMultiModalDataset":
+    def _concatenate(self, other: "ArrayMultiModalDataset") -> "ArrayMultiModalDataset":
         if not isinstance(other, ArrayMultiModalDataset):
             raise ValueError("Can only join with ArrayMultiModalDataset")
         if len(self.window_slices) != len(other.window_slices):
@@ -126,7 +126,7 @@ class ArrayMultiModalDataset(MultiModalDataset):
         )
 
     @staticmethod
-    def from_pandas(other: "PandasMultiModalDataset"):
+    def from_pandas(other: "PandasMultiModalDataset") -> "ArrayMultiModalDataset":
         new_start = 0
         slices = []
         for start, end in other.window_slices:
@@ -265,7 +265,7 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
             as_array=self.as_array,
         )
 
-    def merge(self, other: "PandasMultiModalDataset") -> "PandasMultiModalDataset":
+    def _merge(self, other: "PandasMultiModalDataset") -> "PandasMultiModalDataset":
         if not isinstance(other, PandasMultiModalDataset):
             raise ValueError("Can only join with PandasMultiModalDataset")
 
@@ -299,9 +299,10 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
             as_array=self.as_array,
         )
         dset.feature_windows = feature_windows
+        dset.feature_columns = self.feature_columns + other.feature_columns
         return dset
 
-    def concatenate(self, other: "PandasDataset") -> "PandasDataset":
+    def _concatenate(self, other: "PandasDataset") -> "PandasDataset":
         if not isinstance(other, PandasMultiModalDataset):
             raise ValueError("Can only concatenate with PandasMultiModalDataset")
 
@@ -313,7 +314,7 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
         df = pd.concat([self.data, other.data], axis=0)
         return PandasMultiModalDataset(
             df,
-            feature_prefixes=self.ffeature_prefixesea,
+            feature_prefixes=self.feature_prefixes,
             label_columns=self.label_columns,
             as_array=self.as_array,
         )
@@ -321,8 +322,61 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
     def get_data(self) -> pd.DataFrame:
         return self.data[self.feature_columns]
 
+    @staticmethod
+    def from_array(
+        other: ArrayMultiModalDataset, label_column_name="label", as_array: bool = True
+    ) -> "PandasMultiModalDataset":
+        """Create a `PandasMultiModalDataset` from a `ArrayMultiModalDataset`."""
+        if not isinstance(other, ArrayMultiModalDataset):
+            raise ValueError("dataset must be an ArrayMultiModalDataset")
+
+        X, y = other.X.copy(), other.y.copy()
+        if X.ndim == 1:
+            X = X[:, None]
+        if y.ndim == 1:
+            y = y[:, None]
+
+        if y.shape[-1] == 1:
+            label_cols = [label_column_name]
+        else:
+            label_cols = [f"{label_column_name}-{i}" for i in range(y.shape[-1])]
+
+        columns = [f"Unnamed: {i}" for i in range(X.shape[-1])] + label_cols
+        for wname, (start, end) in zip(other.window_names, other.window_slices):
+            columns[start:end] = [f"{wname}-{i-start}" for i in range(start, end)]
+
+        data = pd.DataFrame(np.hstack([X, y]), columns=columns)
+        return PandasMultiModalDataset(
+            data,
+            feature_prefixes=other.window_names,
+            label_columns=label_cols if len(label_cols) > 1 else label_cols[0],
+            as_array=as_array,
+        )
+
     def __str__(self) -> str:
         return f"{str(self.get_data())}\n{repr(self)}"
 
     def __repr__(self) -> str:
         return f"PandasMultiModalDataset: samples={len(self.data)}, features={len(self.feature_columns)}, no. window={self.num_windows}, label_columns='{self.label_columns}'"
+
+
+def concat(datasets: List[MultiModalDataset], axis: int = 0) -> MultiModalDataset:
+    """Concatenate a list of `MultiModalDataset`."""
+    if axis not in [0, 1]:
+        raise ValueError("axis must be 0 or 1")
+    if not isinstance(datasets, list) and not isinstance(datasets, tuple):
+        raise ValueError("datasets must be a list")
+    if len(datasets) < 1:
+        raise ValueError("datasets must contain at least two datasets")
+
+    dataset = datasets[0]
+    for other in datasets[1:]:
+        if not isinstance(other, type(dataset)):
+            raise ValueError(
+                "Can only concatenate datasets of the same type. Explicitly cast to the same type first."
+            )
+        if axis == 0:
+            dataset = dataset._concatenate(other)
+        else:
+            dataset = dataset._merge(other)
+    return dataset

@@ -121,7 +121,7 @@ class DatasetTransformer:
                 window_slices=[(0, transformed_arr.shape[1])],
             )
             if remaining_dataset is not None:
-                return remaining_dataset.merge(arr)
+                return remaining_dataset._merge(arr)
             else:
                 return arr
 
@@ -138,7 +138,7 @@ class DatasetCombiner:
         for d in datasets[1:]:
             if isinstance(d, PandasMultiModalDataset):
                 d = ArrayMultiModalDataset.from_pandas(d)
-            dataset = dataset.merge(d)
+            dataset = dataset._merge(d)
         return dataset
 
     def __call__(self, *args, **kwds):
