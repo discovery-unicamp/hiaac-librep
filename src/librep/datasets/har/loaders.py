@@ -14,7 +14,7 @@ from librep.utils.file_ops import (
     MD5Checksum,
     Extractor,
     ZipExtractor,
-    DownloaderExtractor
+    DownloaderExtractor,
 )
 
 
@@ -25,7 +25,7 @@ standard_activity_codes = {
     3: "stair up",
     4: "stair down",
     5: "run",
-    6: "stair up and down"
+    6: "stair up and down",
 }
 
 
@@ -44,7 +44,6 @@ class PandasMultiModalLoader:
     validation_file = "validation.csv"
     test_file = "test.csv"
 
-
     feature_columns = ["accel-x", "accel-y", "accel-z", "gyro-x", "gyro-y", "gyro-z"]
     default_label = "activity code"
     standard_label = "standard activity code"
@@ -62,7 +61,7 @@ class PandasMultiModalLoader:
         downloader = DownloaderExtractor(
             downloader_cls=self.downloader_cls,
             extractor_cls=self.extractor_cls,
-            checker_cls=self.checksum_cls
+            checker_cls=self.checksum_cls,
         )
         self.root_dir.mkdir(exist_ok=True, parents=True)
         downloader.download_extract_check(
@@ -71,12 +70,12 @@ class PandasMultiModalLoader:
             checksum=self.zip_checksum,
             extract_folder=self.root_dir,
             remove_on_check_error=True,
-            remove_downloads=True
+            remove_downloads=True,
         )
 
         if self.extracted_zip_root_dir:
             source_path = self.root_dir / self.extracted_zip_root_dir
-            for src_file in source_path.glob('*.*'):
+            for src_file in source_path.glob("*.*"):
                 shutil.move(str(src_file), str(self.root_dir))
             source_path.rmdir()
 
@@ -243,8 +242,8 @@ class PandasMultiModalLoader:
 class KuHar_BalancedView20HzMotionSenseEquivalent(PandasMultiModalLoader):
     url: str = "1501tfOYvyqjA95i_I2N_Y0XM3bvPA9Fl"
     description = (
-        "KuHar Balanced View Resampled to 20HZ with classes " +
-        "equivalent to MotionSense"
+        "KuHar Balanced View Resampled to 20HZ with classes "
+        + "equivalent to MotionSense"
     )
 
     downloader_cls: Downloader = GoogleDriveDownloader
@@ -267,7 +266,7 @@ class KuHar_BalancedView20HzMotionSenseEquivalent(PandasMultiModalLoader):
         2: "sit",
         3: "stand",
         4: "walk",
-        5: "run"
+        5: "run",
     }
 
     standard_activity_codes = {
@@ -276,15 +275,13 @@ class KuHar_BalancedView20HzMotionSenseEquivalent(PandasMultiModalLoader):
         2: "walk",
         3: "stair up",
         4: "stair down",
-        5: "run"
+        5: "run",
     }
 
 
 class MotionSense_BalancedView20HZ(PandasMultiModalLoader):
     url: str = "1KKaTXswpsK3PaxCHzccec3LmCuKNr5VX"
-    description = (
-        "MoationSense Balanced View Resampled to 20HZ (filtered)"
-    )
+    description = "MoationSense Balanced View Resampled to 20HZ (filtered)"
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
@@ -306,7 +303,7 @@ class MotionSense_BalancedView20HZ(PandasMultiModalLoader):
         2: "sitting",
         3: "stand",
         4: "walking",
-        5: "jogging"
+        5: "jogging",
     }
 
     standard_activity_codes = {
@@ -315,15 +312,13 @@ class MotionSense_BalancedView20HZ(PandasMultiModalLoader):
         2: "walk",
         3: "stair up",
         4: "stair down",
-        5: "run"
+        5: "run",
     }
 
 
 class ExtraSensorySense_UnbalancedView20HZ(PandasMultiModalLoader):
     url: str = "1Vk2EKLwlvsePb1jx-ZMk_tczvhYpjGJv"
-    description = (
-        "ExtraSensory Unbalanced View Resampled to 20HZ (train only)"
-    )
+    description = "ExtraSensory Unbalanced View Resampled to 20HZ (train only)"
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
@@ -346,18 +341,12 @@ class ExtraSensorySense_UnbalancedView20HZ(PandasMultiModalLoader):
         3: "fix_running",
     }
 
-    standard_activity_codes = {
-        1: "stand",
-        2: "walk",
-        5: "run"
-    }
+    standard_activity_codes = {1: "stand", 2: "walk", 5: "run"}
 
 
 class WISDM_BalancedView20Hz(PandasMultiModalLoader):
     url: str = "112IpUIRcPewVg4cFK4utAJUV8XN0MJG_"
-    description = (
-        "WISDM Balanced View Resampled to 20Hz (filtered)"
-    )
+    description = "WISDM Balanced View Resampled to 20Hz (filtered)"
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
@@ -378,22 +367,15 @@ class WISDM_BalancedView20Hz(PandasMultiModalLoader):
         1: "jogging",
         2: "stairs",
         3: "sitting",
-        4: "standing"
+        4: "standing",
     }
 
-    standard_activity_codes = {
-        0: "sit",
-        1: "stand",
-        2: "walk",
-        6: "stair up and down"
-    }
+    standard_activity_codes = {0: "sit", 1: "stand", 2: "walk", 6: "stair up and down"}
 
 
 class UCIHAR_BalancedView20Hz(PandasMultiModalLoader):
     url: str = "1wF4eGuHZr_4CIQ1CNUG8zxppD8R8AoGq"
-    description = (
-        "UCI-HAR Balanced View Resampled to 20Hz (filtered)"
-    )
+    description = "UCI-HAR Balanced View Resampled to 20Hz (filtered)"
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
@@ -414,7 +396,7 @@ class UCIHAR_BalancedView20Hz(PandasMultiModalLoader):
         2: "walking upstairs",
         3: "walking downstairs",
         4: "sitting",
-        5: "standing"
+        5: "standing",
     }
 
     standard_activity_codes = {
@@ -422,15 +404,13 @@ class UCIHAR_BalancedView20Hz(PandasMultiModalLoader):
         1: "stand",
         2: "walk",
         3: "stair up",
-        4: "stair down"
+        4: "stair down",
     }
 
 
 class MegaHARDataset_BalancedView20Hz(PandasMultiModalLoader):
     url: str = "1h6CD9B8Tx3XXXLlsGaawxj_0c4eSCEPb"
-    description = (
-        "MegaHAR dataset with all views with 20Hz in a single CSV (filtered)"
-    )
+    description = "MegaHAR dataset with all views with 20Hz in a single CSV (filtered)"
 
     downloader_cls: Downloader = GoogleDriveDownloader
     extractor_cls: Extractor = ZipExtractor
@@ -451,7 +431,7 @@ class MegaHARDataset_BalancedView20Hz(PandasMultiModalLoader):
         2: "walking upstairs",
         3: "walking downstairs",
         4: "sitting",
-        5: "standing"
+        5: "standing",
     }
 
     standard_activity_codes = {

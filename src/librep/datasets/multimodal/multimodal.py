@@ -313,7 +313,7 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
         df = pd.concat([self.data, other.data], axis=0)
         return PandasMultiModalDataset(
             df,
-            feature_prefixes=self.ffeature_prefixesea,
+            feature_prefixes=self.feature_prefixes,
             label_columns=self.label_columns,
             as_array=self.as_array,
         )
