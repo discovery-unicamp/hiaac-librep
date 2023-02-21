@@ -83,7 +83,7 @@ class ArrayMultiModalDataset(MultiModalDataset):
             window_names.append(name)
             new_X.append(self.X[:, the_slice[0] : the_slice[1]])
 
-        if len (new_X) > 1:
+        if len(new_X) > 1:
             new_X = self.collate_fn(new_X)
         else:
             new_X = new_X[0]
