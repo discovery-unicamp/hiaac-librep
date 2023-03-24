@@ -25,10 +25,11 @@ class TopologicalDimensionalityReduction(Transform):
     def fit_for_1000_epochs(self, X: ArrayLike, y: ArrayLike = None):
         return
 
-    def fit(self, X: ArrayLike, y: ArrayLike = None, title_plot=None):
-        train_X, val_X, train_Y, val_Y = train_test_split(X, y, random_state=0, train_size = .8, stratify=y)
-        train_data_loader = torch.utils.data.DataLoader(dataset=train_X, batch_size=self.batch_size, shuffle=True)
-        val_data_loader = torch.utils.data.DataLoader(dataset=val_X, batch_size=self.batch_size, shuffle=True)
+    def fit(self, X_train: ArrayLike, X_val: ArrayLike = None, y_train: ArrayLike = None, y_val: ArrayLike = None, title_plot=None):
+        if X_val == None:
+            X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, random_state=0, train_size = .8, stratify=y_train)
+        train_data_loader = torch.utils.data.DataLoader(dataset=X_train, batch_size=self.batch_size, shuffle=True)
+        val_data_loader = torch.utils.data.DataLoader(dataset=X_val, batch_size=self.batch_size, shuffle=True)
         patience = self.patience
         max_loss = self.max_loss
         
