@@ -83,7 +83,10 @@ class ArrayMultiModalDataset(MultiModalDataset):
             window_names.append(name)
             new_X.append(self.X[:, the_slice[0] : the_slice[1]])
 
-        new_X = self.collate_fn(new_X)
+        if len(new_X) > 1:
+            new_X = self.collate_fn(new_X)
+        else:
+            new_X = new_X[0]
         return ArrayMultiModalDataset(
             new_X, self.y, window_slices=window_slices, window_names=window_names
         )
@@ -313,7 +316,7 @@ class PandasMultiModalDataset(PandasDataset, MultiModalDataset):
         df = pd.concat([self.data, other.data], axis=0)
         return PandasMultiModalDataset(
             df,
-            feature_prefixes=self.ffeature_prefixesea,
+            feature_prefixes=self.feature_prefixes,
             label_columns=self.label_columns,
             as_array=self.as_array,
         )

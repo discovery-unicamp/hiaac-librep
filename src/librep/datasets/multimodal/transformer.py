@@ -66,6 +66,7 @@ class DatasetFitter:
     def __call__(self, *args, **kwds):
         return self.fit(*args, **kwds)
 
+
 class DatasetPredicter:
     def __init__(
         self,
@@ -84,10 +85,13 @@ class DatasetPredicter:
             )
         else:
             dset = dataset.windows(self.predict_on)
-            return self.the_estimator.predict(dset[:][0], y=dset[:][1] if self.use_y else None)
+            return self.the_estimator.predict(
+                dset[:][0], y=dset[:][1] if self.use_y else None
+            )
 
     def __call__(self, *args, **kwds):
         return self.predict(*args, **kwds)
+
 
 class DatasetTransformer:
     def __init__(
@@ -152,6 +156,7 @@ class DatasetTransformer:
     def __call__(self, *args, **kwds):
         return self.transform(*args, **kwds)
 
+
 class DatasetCombiner:
     def combine(self, *datasets):
         if len(datasets) < 2:
@@ -167,6 +172,7 @@ class DatasetCombiner:
 
     def __call__(self, *args, **kwds):
         return self.combine(*args, **kwds)
+
 
 class DatasetWindowedTransform:
     def __init__(
@@ -213,6 +219,7 @@ class DatasetWindowedTransform:
         else:
             return datasets
 
+
 class DatasetSplitTransformCombine:
     def __init__(
         self,
@@ -257,6 +264,7 @@ class DatasetSplitTransformCombine:
     def __call__(self, *args, **kwds):
         return self.transform(*args, **kwds)
 
+
 class DatasetEvaluator:
     def __init__(self, evaluator: Evaluators):
         self.evaluator = evaluator
@@ -267,6 +275,7 @@ class DatasetEvaluator:
     def __call__(self, *args, **kwds):
         return self.evaluate(*args, **kwds)
 
+
 class DatasetX:
     def get(self, dataset: MultiModalDataset):
         return dataset[:][0]
@@ -274,12 +283,14 @@ class DatasetX:
     def __call__(self, *args, **kwds):
         return self.get(*args, **kwds)
 
+
 class DatasetY:
     def get(self, dataset: MultiModalDataset):
         return dataset[:][1]
 
     def __call__(self, *args, **kwds):
-        return self.get(*args, **kwds)     
+        return self.get(*args, **kwds)
+
 
 class DatasetWindow:
     def __init__(self, window: Union[List[str], str]):
@@ -287,12 +298,13 @@ class DatasetWindow:
             self.window = [window]
         else:
             self.window = window
-    
+
     def get(self, dataset: MultiModalDataset):
         return dataset.windows(self.window)
 
     def __call__(self, *args, **kwds):
         return self.get(*args, **kwds)
+
 
 class Watcher:
     def __init__(self, func: callable) -> None:
@@ -300,6 +312,7 @@ class Watcher:
 
     def __call__(self, *args, **kwds):
         return self.func(*args, **kwds)
+
 
 # class DatasetWindowedTransform:
 #     def __init__(   self, transform: Transform, fit_on: str = "all", transform_on: str = "window",
@@ -509,8 +522,8 @@ class TransformMultiModalDataset:
                 # fit_on=None, transform_on=all *
                 new_X = window_transform.the_transform.transform(X=X)
                 new_y = y
-                new_slices = selected_dataset.window_slices
-                new_names = selected_dataset.window_names
+                new_slices = [(0, new_X.shape[-1])]
+                new_names = [""]
 
             selected_dataset = ArrayMultiModalDataset(
                 new_X, new_y, new_slices, new_names

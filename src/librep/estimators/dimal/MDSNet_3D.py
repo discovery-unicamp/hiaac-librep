@@ -13,7 +13,7 @@ from torch.autograd import Variable
 def MDSNet(Data,Landmarks,NetParams,LearningParams):
 #----------------------- Build the Batches ------------------------------------
     DataV = Variable(torch.FloatTensor(Data))  
-    Ds = Landmarks['Ds'];
+    Ds = Landmarks['Ds']
     indices_FPS = Landmarks['indices']
     
     Dsk = Ds[:,indices_FPS]
@@ -36,9 +36,11 @@ def MDSNet(Data,Landmarks,NetParams,LearningParams):
     #torch.manual_seed(666)#1000 was the typical
     HiddenLayer = NetParams['Size_HL']
     NumberOfHiddenLayers = NetParams['Num_HL']
-    
+    # Take the num columns on Data
+    input_dim = Data.shape[1]
+
     Net = nn.Sequential()
-    Net.add_module('Layer1',nn.Linear(180,HiddenLayer,bias = False))
+    Net.add_module('Layer1',nn.Linear(input_dim,HiddenLayer,bias = False))
     Net.add_module('NonLinear1',torch.nn.PReLU(num_parameters=1, init=0.25))
 
     for layerIter in np.arange(2,NumberOfHiddenLayers+1):
