@@ -1,24 +1,16 @@
 import torch
+import numpy as np
 import sklearn.neighbors as nb
 import librep.estimators.dimal.Functions_ManifoldLearning as FnManifold
 from librep.estimators.dimal.MDSNet_3D import MDSNet
 
-# import numpy as np
-
-# from librep.estimators.ae.torch.models.topological_ae.topological_ae import (
-#     TopologicallyRegularizedAutoencoder
-# )
-# from tqdm.notebook import tqdm
-# from sklearn.model_selection import train_test_split
 from librep.base.transform import Transform
 from librep.config.type_definitions import ArrayLike
-# from torch.optim import Adam
-# import matplotlib.pyplot as plt
-# import pickle
 
 class DIMALDimensionalityReduction(Transform):
 
-    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2):
+    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, cuda_device_name=None):
+        self.cuda_device_name = cuda_device_name
         self.model = None
         self.num_landmarks = num_landmarks
         self.size_HL = size_HL
@@ -30,8 +22,9 @@ class DIMALDimensionalityReduction(Transform):
         # Compute the Graph
         W = nb.kneighbors_graph(X, 10, mode='distance', metric='minkowski',
                                 p=2, metric_params=None, include_self=False, n_jobs=-1)
+
         Landmarks = FnManifold.FPS(W, self.num_landmarks)
-        
+
         self.numIndices = 200
         self.NetParams = {
             'Size_HL': self.size_HL,
@@ -49,7 +42,12 @@ class DIMALDimensionalityReduction(Transform):
 
     def transform(self, X: ArrayLike):
         input_HD = torch.from_numpy(X).float()
-        result_LD = self.model(input_HD).detach().numpy()
+        if self.cuda_device_name:
+            input_HD = input_HD.to(self.cuda_device_name)
+        result_LD = self.model(input_HD).detach()
+        if self.cuda_device_name:
+            result_LD = result_LD.cpu()
+        result_LD = result_LD.numpy()
         return result_LD
 
     def inverse_transform(self, X: ArrayLike):

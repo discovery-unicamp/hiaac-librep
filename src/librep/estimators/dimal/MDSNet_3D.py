@@ -10,24 +10,29 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 
-def MDSNet(Data,Landmarks,NetParams,LearningParams):
+def MDSNet(Data,Landmarks,NetParams,LearningParams, cuda_device_name=None):
 #----------------------- Build the Batches ------------------------------------
     DataV = Variable(torch.FloatTensor(Data))  
     Ds = Landmarks['Ds']
     indices_FPS = Landmarks['indices']
     
-    Dsk = Ds[:,indices_FPS]
+    Dsk = Ds[:,indices_FPS] # The problem of na there is the variable Dsk
     numFPS = Dsk.shape[0]    
-    batch = np.zeros([int(numFPS*(numFPS-1)/2),3])
+    batch = np.zeros([int(numFPS*(numFPS-1)/2),3]) # The problem of na there is the variable batch
     # print('batch', batch.shape, 'numFPS', numFPS)
+
     index = 0    
     for i in range(0,numFPS):
         for j in range(i+1,numFPS):
             batch[index,:] = [i,j,Dsk[i,j]]
             index = index+1
-    
+
     D = Variable(torch.FloatTensor(Data[indices_FPS,:]))
     d = Variable(torch.FloatTensor(batch[:,2]))
+    if cuda_device_name:
+        D = Variable(torch.cuda.FloatTensor(Data[indices_FPS,:]))
+        d = Variable(torch.cuda.FloatTensor(batch[:,2]))
+        DataV = Variable(torch.cuda.FloatTensor(Data))  
     sumd = d.pow(2).sum()
     # print(Ds)
 #==============================================================================
@@ -48,7 +53,13 @@ def MDSNet(Data,Landmarks,NetParams,LearningParams):
         Net.add_module('NonLinear'+str(layerIter),torch.nn.PReLU(num_parameters=1, init=0.25))
  
     Net.add_module('LayerEnd',nn.Linear(HiddenLayer,10,bias = False))
-
+    # Edit: Add GPU usage
+    cuda_device = None
+    if cuda_device_name:
+        cuda_device = torch.device(cuda_device_name)
+        Net.to(cuda_device)
+        # Net = torch.nn.DataParallel(Net)
+    # End edit
     Numiter=LearningParams['Numiter']
     learning_rate=LearningParams['learning_rate']
     tol = LearningParams['tol']
@@ -68,7 +79,9 @@ def MDSNet(Data,Landmarks,NetParams,LearningParams):
     train_err = np.zeros(Numiter)
     ind1 =Variable(torch.LongTensor(batch[:,0].astype(int)))
     ind2 =Variable(torch.LongTensor(batch[:,1].astype(int)))
-    
+    if cuda_device_name:
+        ind1 =Variable(torch.cuda.LongTensor(batch[:,0].astype(int))).cuda()
+        ind2 =Variable(torch.cuda.LongTensor(batch[:,1].astype(int))).cuda()
     
     for itern in range(0,Numiter):
         # print(itern)
@@ -78,12 +91,7 @@ def MDSNet(Data,Landmarks,NetParams,LearningParams):
         Y2 = Y.index_select(0,ind2)
         
         loss = torch.sum(((Y1-Y2)*(Y1-Y2)), dim=1).pow(0.5).sub(d).pow(2).sum().div(sumd)
-        print('LOSS', itern, loss)
-        # print(itern) #, torch.isnan(loss).any(), torch.numel(sumd) - torch.count_nonzero(sumd))
-        # print(sumd)
-        # loss = loss
-        
-        
+
         train_err[itern] = loss.data
         
         adjust_lr(optimizer, itern, learning_rate);            
@@ -91,10 +99,11 @@ def MDSNet(Data,Landmarks,NetParams,LearningParams):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step() 
-        
+    print('FINAL LOSS', loss)
 ##==============================================================================
        
-    embedding_MDSNet = Net.forward(DataV).squeeze().data.numpy()
+    embedding_MDSNet_data = Net.forward(DataV).squeeze().data
+    if cuda_device_name:
+        embedding_MDSNet_data = embedding_MDSNet_data.cpu()
+    embedding_MDSNet = embedding_MDSNet_data.numpy()
     return embedding_MDSNet,Net,train_err
-        
-        

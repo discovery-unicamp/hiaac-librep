@@ -12,19 +12,24 @@ from scipy import sparse, linalg
 def FPS(W,num_FPS):
 
     Numpts = W.shape[0]
-    indices_FPS = [];
+    indices_FPS = []
     indices_FPS.append(np.random.randint(0,Numpts))
     
     Dsk = np.zeros([num_FPS,Numpts])
          
     for itern in range(0,num_FPS-1):
+        # Search the max value different from inf and nan in Dsk
         # first compute the distances:
         Dsk[itern,:] = sparse.csgraph.dijkstra(W,directed = False,indices=indices_FPS[itern])
         # print(itern, indices_FPS[itern], Dsk)
         indices_FPS.append(np.argmax(np.ndarray.min(Dsk[0:itern+1,:],0)))
         # print(itern, indices_FPS)
     Dsk[itern+1,:] = sparse.csgraph.dijkstra(W,directed = False,indices=indices_FPS[-1])
-    
+
+    # Remove all nan and inf values from Dsk changing them to the max value
+    Dsk[np.isnan(Dsk)] = np.max(Dsk[np.isfinite(Dsk)])
+    Dsk[np.isinf(Dsk)] = np.max(Dsk[np.isfinite(Dsk)])
+
     Landmarks = {'indices':indices_FPS,'Ds': Dsk,'W':W}
     # print('FPS - Dsk', Dsk)
     return Landmarks
