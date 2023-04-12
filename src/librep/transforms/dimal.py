@@ -9,7 +9,8 @@ from librep.config.type_definitions import ArrayLike
 
 class DIMALDimensionalityReduction(Transform):
 
-    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, cuda_device_name=None):
+    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, n_neighbors=20, cuda_device_name=None):
+        self.n_neighbors = n_neighbors
         self.cuda_device_name = cuda_device_name
         self.model = None
         self.num_landmarks = num_landmarks
@@ -20,7 +21,7 @@ class DIMALDimensionalityReduction(Transform):
     
     def fit(self, X: ArrayLike, y: ArrayLike = None):
         # Compute the Graph
-        W = nb.kneighbors_graph(X, 10, mode='distance', metric='minkowski',
+        W = nb.kneighbors_graph(X, n_neighbors=self.n_neighbors, mode='distance', metric='minkowski',
                                 p=2, metric_params=None, include_self=False, n_jobs=-1)
 
         Landmarks = FnManifold.FPS(W, self.num_landmarks)

@@ -26,12 +26,7 @@ def FPS(W,num_FPS):
         # print(itern, indices_FPS)
     Dsk[itern+1,:] = sparse.csgraph.dijkstra(W,directed = False,indices=indices_FPS[-1])
 
-    # Remove all nan and inf values from Dsk changing them to the max value
-    Dsk[np.isnan(Dsk)] = np.max(Dsk[np.isfinite(Dsk)])
-    Dsk[np.isinf(Dsk)] = np.max(Dsk[np.isfinite(Dsk)])
-
     Landmarks = {'indices':indices_FPS,'Ds': Dsk,'W':W}
-    # print('FPS - Dsk', Dsk)
     return Landmarks
 
 #==============================================================================
