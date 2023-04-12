@@ -9,7 +9,7 @@ from librep.config.type_definitions import ArrayLike
 
 class DIMALDimensionalityReduction(Transform):
 
-    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, n_neighbors=20, cuda_device_name=None):
+    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, n_neighbors=25, cuda_device_name=None):
         self.n_neighbors = n_neighbors
         self.cuda_device_name = cuda_device_name
         self.model = None
