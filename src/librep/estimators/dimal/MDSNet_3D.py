@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 
-def MDSNet(Data,Landmarks,NetParams,LearningParams, cuda_device_name=None):
+def MDSNet(Data,Landmarks,NetParams,LearningParams, latent_dim=10, cuda_device_name=None):
 #----------------------- Build the Batches ------------------------------------
     DataV = Variable(torch.FloatTensor(Data))  
     Ds = Landmarks['Ds']
@@ -52,7 +52,7 @@ def MDSNet(Data,Landmarks,NetParams,LearningParams, cuda_device_name=None):
         Net.add_module('Layer'+str(layerIter),nn.Linear(HiddenLayer,HiddenLayer,bias = False))
         Net.add_module('NonLinear'+str(layerIter),torch.nn.PReLU(num_parameters=1, init=0.25))
  
-    Net.add_module('LayerEnd',nn.Linear(HiddenLayer,10,bias = False))
+    Net.add_module('LayerEnd',nn.Linear(HiddenLayer,latent_dim,bias = False))
     # Edit: Add GPU usage
     cuda_device = None
     if cuda_device_name:

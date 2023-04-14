@@ -9,7 +9,8 @@ from librep.config.type_definitions import ArrayLike
 
 class DIMALDimensionalityReduction(Transform):
 
-    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, n_neighbors=25, cuda_device_name=None):
+    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, n_neighbors=25, latent_dim=10, cuda_device_name=None):
+        self.latent_dim = latent_dim
         self.n_neighbors = n_neighbors
         self.cuda_device_name = cuda_device_name
         self.model = None
@@ -38,7 +39,7 @@ class DIMALDimensionalityReduction(Transform):
             'Ds':Landmarks['Ds'][0:self.numIndices]
         }
         # Run MDS
-        MDSNet_3D_result = MDSNet(X, self.Landmarks_FPS, self.NetParams, self.LearningParams)
+        MDSNet_3D_result = MDSNet(X, self.Landmarks_FPS, self.NetParams, self.LearningParams, self.latent_dim, cuda_device_name=self.cuda_device_name)
         self.model = MDSNet_3D_result[1]
 
     def transform(self, X: ArrayLike):
