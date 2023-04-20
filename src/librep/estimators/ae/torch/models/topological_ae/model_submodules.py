@@ -332,6 +332,8 @@ class ConvTAE_def(AutoencoderModel):
         super().__init__()
         # Size of the connection between conv-hidden / hidden-conv
         connection_size = size_CL*(input_dims[1]-num_CL*4)
+        if num_CL == 0:
+            connection_size = input_dims[1]
         # Defining the list of layers to use
         encoder_list_layers = []
         decoder_list_layers = []
@@ -340,23 +342,25 @@ class ConvTAE_def(AutoencoderModel):
         # --------------------------------------------------------------
         # CONVOLUTIONAL LAYERS -----------------------------------------
         # --------------------------------------------------------------
-        # All convolutional layers (only sizes)
-        conv_layers = [(size_CL, size_CL) for i in range(num_CL)]
-        # Editing first convolutional layer
-        conv_layers[0] = (1, size_CL)
-        # Updating encoder layers
-        for pair in conv_layers:
-            layer = nn.Conv1d(
-                in_channels=pair[0],
-                out_channels=pair[1],
-                kernel_size=5,
-                stride=1,
-                padding=0
-            )
-            encoder_list_layers.append(layer)
-            encoder_list_layers.append(nn.ReLU())
-        # Add the "View" view
-        encoder_list_layers.append(View((-1, connection_size)))
+        # Check if num_CL == 0
+        if num_CL != 0:
+            # All convolutional layers (only sizes)
+            conv_layers = [(size_CL, size_CL) for i in range(num_CL)]
+            # Editing first convolutional layer
+            conv_layers[0] = (1, size_CL)
+            # Updating encoder layers
+            for pair in conv_layers:
+                layer = nn.Conv1d(
+                    in_channels=pair[0],
+                    out_channels=pair[1],
+                    kernel_size=5,
+                    stride=1,
+                    padding=0
+                )
+                encoder_list_layers.append(layer)
+                encoder_list_layers.append(nn.ReLU())
+            # Add the "View" view
+            encoder_list_layers.append(View((-1, connection_size)))
         # --------------------------------------------------------------
         # HIDDEN LAYERS ------------------------------------------------
         # --------------------------------------------------------------
@@ -392,27 +396,30 @@ class ConvTAE_def(AutoencoderModel):
             decoder_list_layers.append(layer)
             decoder_list_layers.append(nn.ReLU())
         # Adding the "View" view before the last ReLU()
-        last_relu = decoder_list_layers.pop()
-        decoder_list_layers.append(View((-1, size_CL, input_dims[1]-num_CL*4)))
-        decoder_list_layers.append(last_relu)
+        if num_CL != 0:
+            last_relu = decoder_list_layers.pop()
+            decoder_list_layers.append(View((-1, size_CL, input_dims[1]-num_CL*4)))
+            decoder_list_layers.append(last_relu)
         # --------------------------------------------------------------
         # CONVOLUTIONAL LAYERS -----------------------------------------
         # --------------------------------------------------------------
         # All convolutional layers (only sizes)
-        conv_layers = [(size_CL, size_CL) for i in range(num_CL)]
-        # Editing last convolutional layer
-        conv_layers[-1] = (size_CL, 1)
-        # Updating decoder layers
-        for pair in conv_layers:
-            layer = nn.ConvTranspose1d(
-                in_channels=pair[0],
-                out_channels=pair[1],
-                kernel_size=5,
-                stride=1,
-                padding=0
-            )
-            decoder_list_layers.append(layer)
-            decoder_list_layers.append(nn.ReLU())
+        # Check if num_CL == 0
+        if num_CL != 0:
+            conv_layers = [(size_CL, size_CL) for i in range(num_CL)]
+            # Editing last convolutional layer
+            conv_layers[-1] = (size_CL, 1)
+            # Updating decoder layers
+            for pair in conv_layers:
+                layer = nn.ConvTranspose1d(
+                    in_channels=pair[0],
+                    out_channels=pair[1],
+                    kernel_size=5,
+                    stride=1,
+                    padding=0
+                )
+                decoder_list_layers.append(layer)
+                decoder_list_layers.append(nn.ReLU())
         # Build the decoder
         self.decoder = nn.Sequential(*decoder_list_layers)
         # print(self.encoder)
