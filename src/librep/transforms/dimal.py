@@ -11,7 +11,7 @@ from librep.config.type_definitions import ArrayLike
 
 class DIMALDimensionalityReduction(Transform):
 
-    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, n_neighbors=25, latent_dim=10, cuda_device_name=None, force_connection=True):
+    def __init__(self, torch_seed=1000, num_landmarks=500, size_HL=70, num_HL=2, n_neighbors=10, latent_dim=10, cuda_device_name=None, force_connection=True):
         self.latent_dim = latent_dim
         self.n_neighbors = n_neighbors
         self.cuda_device_name = cuda_device_name
@@ -22,12 +22,12 @@ class DIMALDimensionalityReduction(Transform):
         self.force_connection = force_connection
         torch.manual_seed(torch_seed)
         
-    def force_connection_in_graph(points, graph):
-        group_total, elements = connected_components(graph)
-        while group_total > 1:
+    def force_connection_in_graph(self, points, graph):
+        n_components, elements = connected_components(graph)
+        while n_components > 1:
             all_data = [(elem[0], np.array(elem[1]), elements[elem[0]]) for elem in enumerate(points)]
             groups = []
-            for group_id in range(group_total):
+            for group_id in range(n_components):
                 group = [elem for elem in all_data if elem[2] == group_id]
                 groups.append(group)
             first_group = groups[0]
@@ -42,7 +42,7 @@ class DIMALDimensionalityReduction(Transform):
                 graph[pointA[0], pointB[0]] = np.min(distances)
                 graph[pointB[0], pointA[0]] = np.min(distances)
                 
-            group_total, elements = connected_components(graph)
+            n_components, elements = connected_components(graph)
         return graph
     
     def fit(self, X: ArrayLike, y: ArrayLike = None):
@@ -51,7 +51,7 @@ class DIMALDimensionalityReduction(Transform):
                                 p=2, metric_params=None, include_self=False, n_jobs=-1)
 
         if self.force_connection:
-            W = self.force_connection_in_graph(W)
+            W = self.force_connection_in_graph(X, W)
         
         Landmarks = FnManifold.FPS(W, self.num_landmarks)
 
