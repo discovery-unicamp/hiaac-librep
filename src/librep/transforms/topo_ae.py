@@ -355,6 +355,9 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
             'latent_dim': latent_dim
         }
         ae_kwargs.update(extra_properties)
+        input_shape = (-1, 1, start_dim)
+        if ae_kwargs['num_CL'] == 0:
+            input_shape = (-1, start_dim)
         super().__init__(
             ae_model=model_name,
             ae_kwargs=ae_kwargs,
@@ -362,7 +365,7 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
             patience=patience,
             num_epochs=num_epochs,
             batch_size=batch_size,
-            input_shape=(-1, 1, start_dim),
+            input_shape=input_shape,
             cuda_device_name=cuda_device_name,
             start_dim=start_dim,
             latent_dim=latent_dim,
