@@ -145,9 +145,11 @@ class TopologicalDimensionalityReduction(Transform):
             epoch_val_topo_error = []
             self.model.train()
             for data in train_data_loader:
-                reshaped_data = np.reshape(data, self.input_shape)
-                in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
-                # self.model.to(cuda0)
+                # reshaped_data = np.reshape(data, self.input_shape)
+                # in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
+                in_tensor = torch.reshape(data, self.input_shape)
+                in_tensor = in_tensor.to(self.cuda_device)
+                in_tensor = in_tensor.float()
                 loss, loss_components = self.model(in_tensor)
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -157,8 +159,11 @@ class TopologicalDimensionalityReduction(Transform):
                 epoch_train_topo_error.append(loss_components['loss.topo_error'].item())
             # Verificar despues self.model()
             for data in val_data_loader:
-                reshaped_data = np.reshape(data, self.input_shape)
-                in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
+                # reshaped_data = np.reshape(data, self.input_shape)
+                # in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
+                in_tensor = torch.reshape(data, self.input_shape)
+                in_tensor = in_tensor.to(self.cuda_device)
+                in_tensor = in_tensor.float()
                 loss, loss_components = self.model(in_tensor)
                 epoch_val_loss.append(loss.item())
                 epoch_val_ae_loss.append(loss_components['loss.autoencoder'].item())
