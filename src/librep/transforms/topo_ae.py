@@ -40,24 +40,11 @@ class TopologicalDimensionalityReduction(Transform):
         self.model_lambda = lam
         self.model_start_dim = start_dim
         self.model_latent_dim = latent_dim
-        self.model = TopologicallyRegularizedAutoencoder(
-            autoencoder_model=self.model_name,
-            lam=self.model_lambda, ae_kwargs=ae_kwargs
-        )
+        self.ae_kwargs = ae_kwargs
         self.verbose = verbose
         # Setting cuda device
         self.cuda_device = torch.device(cuda_device_name)
-        self.model.to(self.cuda_device)
-        ####
-        # print('CHANGING MODEL')
-        # self.model = torch.nn.DataParallel(self.model)
-        # self.ddp_model = DDP(self.model, device_ids=[self.cuda_device])
-        ####
-        # Optimizer
-        self.optimizer = Adam(self.model.parameters(),
-                              lr=1e-3, weight_decay=1e-5)
         self.batch_size = batch_size
-        print(self.batch_size)
         self.input_shape = input_shape
         self.max_loss = None
         self.current = {
@@ -79,10 +66,34 @@ class TopologicalDimensionalityReduction(Transform):
             'val_topo_error': [],
             'val_error': []
         }
-        # self.loss_components_values = []
 
-    def fit(self, X: ArrayLike, y: ArrayLike = None,
-            X_val: ArrayLike = None, y_val: ArrayLike = None):
+    def fit(self, X: ArrayLike, y: ArrayLike = None, X_val: ArrayLike = None, y_val: ArrayLike = None):
+        # Computing input dimensions for the model
+        # in the second dim of X.shape
+        # ----------------------------------------------
+        # When the input is 2d:
+        # ----------------------------------------------
+        original_dim = X.shape[1]
+        # Setting self.input_shape
+        self.input_shape = (-1, 1, original_dim)
+        if self.ae_kwargs['num_CL'] == 0:
+            self.input_shape = (-1, original_dim)
+        # Setting ae_kwargs['input_dims']
+        self.ae_kwargs['input_dims'] = (1, original_dim)
+        # ----------------------------------------------
+        # When the input is 3d (length, dim1, dim2): TODO
+        # ----------------------------------------------
+        
+        # Initializing all
+        self.model = TopologicallyRegularizedAutoencoder(
+            autoencoder_model=self.model_name,
+            lam=self.model_lambda, ae_kwargs=self.ae_kwargs
+        )
+        self.model.to(self.cuda_device)
+        # Optimizer
+        self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
+        
+        # Save file name
         random_number = random.randint(1000, 9999)
         best_file_name = '{}_{}_{}_{}'.format(
             self.model_name, random_number, self.model_lambda, self.save_tag)
