@@ -24,8 +24,10 @@ class TopologicalDimensionalityReduction(Transform):
     def __init__(
         self, ae_model='ConvolutionalAutoencoder', ae_kwargs=None,
         lam=1., patience=None, num_epochs=500, batch_size=64,
-        input_shape=(-1, 1, 28, 28), cuda_device_name='cuda:0',
-        start_dim=180, latent_dim=10,
+        # input_shape=(-1, 1, 28, 28),
+        cuda_device_name='cuda:0',
+        # start_dim=180,
+        latent_dim=10,
         save_dir='data/', save_tag=0, save_frequency=250, verbose=False
     ):
         # os.environ['MASTER_ADDR'] = 'localhost'
@@ -38,14 +40,14 @@ class TopologicalDimensionalityReduction(Transform):
         self.num_epochs = num_epochs
         self.model_name = ae_model
         self.model_lambda = lam
-        self.model_start_dim = start_dim
+        # self.model_start_dim = start_dim
         self.model_latent_dim = latent_dim
         self.ae_kwargs = ae_kwargs
         self.verbose = verbose
         # Setting cuda device
         self.cuda_device = torch.device(cuda_device_name)
         self.batch_size = batch_size
-        self.input_shape = input_shape
+        # self.input_shape = input_shape
         self.max_loss = None
         self.current = {
             'epoch': 0,
@@ -74,6 +76,7 @@ class TopologicalDimensionalityReduction(Transform):
         # When the input is 2d:
         # ----------------------------------------------
         original_dim = X.shape[1]
+        # self.model_start_dim = original_dim
         # Setting self.input_shape
         self.input_shape = (-1, 1, original_dim)
         if self.ae_kwargs['num_CL'] == 0:
@@ -249,12 +252,13 @@ class TopologicalDimensionalityReduction(Transform):
     def save(self, save_dir='data/', tag=None):
         model_name = self.model_name
         model_lambda = self.model_lambda
-        model_start_dim = self.model_start_dim
+        # model_start_dim = self.model_start_dim
         model_latent_dim = self.model_latent_dim
         model_epc = self.current['epoch']
-        filename = '{}_{}_{}-{}_{}_{}.pkl'.format(
+        filename = '{}_{}-{}_{}_{}.pkl'.format(
             model_name, model_lambda,
-            model_start_dim, model_latent_dim,
+            # model_start_dim,
+            model_latent_dim,
             model_epc, self.save_tag)
         full_dir = self.save_dir + filename
         filehandler = open(full_dir, 'wb')
@@ -265,13 +269,14 @@ class TopologicalDimensionalityReduction(Transform):
     def partial_save(self, name=None, reuse_file=None):
         model_name = self.model_name
         model_lambda = self.model_lambda
-        model_start_dim = self.model_start_dim
+        # model_start_dim = self.model_start_dim
         model_latent_dim = self.model_latent_dim
         model_epc = self.num_epochs
         model_tag = self.save_tag
-        filename = '{}_{}_{}-{}_{}_{}_ep{}'.format(
+        filename = '{}_{}-{}_{}_{}_ep{}'.format(
             model_name, model_lambda,
-            model_start_dim, model_latent_dim,
+            # model_start_dim,
+            model_latent_dim,
             model_epc, model_tag, self.current['epoch'])
         if name:
             filename = name
@@ -287,13 +292,14 @@ class TopologicalDimensionalityReduction(Transform):
     def partial_load(self, epoch=250, name=None):
         model_name = self.model_name
         model_lambda = self.model_lambda
-        model_start_dim = self.model_start_dim
+        # model_start_dim = self.model_start_dim
         model_latent_dim = self.model_latent_dim
         model_epc = self.num_epochs
         model_tag = self.save_tag
-        filename = '{}_{}_{}-{}_{}_{}_ep{}'.format(
+        filename = '{}_{}-{}_{}_{}_ep{}'.format(
             model_name, model_lambda,
-            model_start_dim, model_latent_dim,
+            # model_start_dim,
+            model_latent_dim,
             model_epc, model_tag, epoch)
         if name:
             filename = name
@@ -360,20 +366,20 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
                  model_lambda=1,
                  patience=None,
                  num_epochs=175,
-                 start_dim=180,
+                #  start_dim=180,
                  latent_dim=2,
                  batch_size=64,
                  cuda_device_name='cuda:0',
                  extra_properties={},
                  save_dir='data/', save_tag=0, save_frequency=250):
         ae_kwargs = {
-            'input_dims': (1, start_dim),
+            # 'input_dims': (1, start_dim),
             'latent_dim': latent_dim
         }
         ae_kwargs.update(extra_properties)
-        input_shape = (-1, 1, start_dim)
-        if ae_kwargs['num_CL'] == 0:
-            input_shape = (-1, start_dim)
+        # input_shape = (-1, 1, start_dim)
+        # if ae_kwargs['num_CL'] == 0:
+            # input_shape = (-1, start_dim)
         super().__init__(
             ae_model=model_name,
             ae_kwargs=ae_kwargs,
@@ -381,9 +387,9 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
             patience=patience,
             num_epochs=num_epochs,
             batch_size=batch_size,
-            input_shape=input_shape,
+            # input_shape=input_shape,
             cuda_device_name=cuda_device_name,
-            start_dim=start_dim,
+            # start_dim=start_dim,
             latent_dim=latent_dim,
             save_dir=save_dir,
             save_tag=save_tag,
