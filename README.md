@@ -22,7 +22,7 @@ In order to contribute with `librep` you may want to:
 1. Clone librep's repository:
 
 ```
-git clone https://github.com/otavioon/hiaac-librep.git
+git clone https://github.com/discovery-unicamp/hiaac-librep.git
 ```
 
 2. Create a python virtual environment and activate it (requires Python >= 3.8):
