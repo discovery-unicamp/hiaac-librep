@@ -6,7 +6,7 @@
 To install `librep`, you may use:
 
 ```
-pip install git+https://github.com/otavioon/hiaac-librep.git
+pip install git+https://github.com/discovery-unicamp/hiaac-librep.git
 ```
 
 ### Pip optional dependencies
@@ -36,7 +36,7 @@ source .librep-venv/bin/activate
 3. Install librep development packages, in editable mode
 
 ```
-pip install -e .[dev]
+pip install -e .[dev] (we need to fix the flag [dev])
 ```
 
 4. Run tests
