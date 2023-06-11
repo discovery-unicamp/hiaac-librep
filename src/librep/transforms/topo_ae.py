@@ -3,7 +3,7 @@ import torch
 from librep.estimators.ae.torch.models.topological_ae.topological_ae import (
     TopologicallyRegularizedAutoencoder
 )
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from librep.base.transform import Transform
 from librep.config.type_definitions import ArrayLike
@@ -13,10 +13,6 @@ import pickle
 import random
 import os
 import shutil
-# from torch.nn.parallel import DistributedDataParallel as DDP
-# import torch.distributed as dist
-# import torch.nn.DataParallel
-# torch.nn.DataParallel(model, device_ids=[0, 1, 2])
 
 
 class TopologicalDimensionalityReduction(Transform):
@@ -138,7 +134,7 @@ class TopologicalDimensionalityReduction(Transform):
         self.val_topo_error = []
         # Setting cuda
         # cuda0 = torch.device('cuda:0')
-        for epoch in range(self.num_epochs):
+        for epoch in tqdm(range(self.num_epochs)):
             epoch_number = self.current['epoch'] + 1
             epoch_train_loss = []
             epoch_train_ae_loss = []
@@ -186,6 +182,11 @@ class TopologicalDimensionalityReduction(Transform):
             self.history['val_topo_error'].append(self.current['val_topo_error'])
             self.history['val_error'].append(self.current['val_error'])
             loss_per_epoch = self.current['val_error']
+            # Check if loss is nan
+            if np.isnan(loss_per_epoch):
+                if self.verbose:
+                    print('Loss is nan, breaking')
+                break
 
             # Check for save the BEST version every "n" epochs: save frequency
             # assuming there is already a best version called "best_file_name"
@@ -195,7 +196,6 @@ class TopologicalDimensionalityReduction(Transform):
                 # shutil.copyfile(self.save_dir + best_file_name, self.save_dir + '')
             
             # Update max loss allowed: if None, then copy from loss_per_epoch
-            # print(max_loss)
             max_loss = max_loss or loss_per_epoch
             # If this model beats the better found until now:
             if loss_per_epoch < max_loss:
@@ -214,6 +214,7 @@ class TopologicalDimensionalityReduction(Transform):
             topo_loss_per_epoch = np.mean(epoch_val_topo_error)
             if self.verbose:
                 print(f'Epoch:{epoch+1}, P:{patience}, Loss:{loss_per_epoch:.4f}, Loss-ae:{ae_loss_per_epoch:.4f}, Loss-topo:{topo_loss_per_epoch:.4f}')
+            # Handle patience
             if self.patience:
                 if max_loss < loss_per_epoch:
                     if patience == 0:
