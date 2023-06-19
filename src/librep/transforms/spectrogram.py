@@ -15,7 +15,7 @@ class Spectrogram(Transform):
         self.fs = fs
         self.segment_size = segment_size
         self.overlap = overlap
-        self.reshape = True
+        self.reshape = reshape
 
     # TODO
     def transform(self, X: ArrayLike):

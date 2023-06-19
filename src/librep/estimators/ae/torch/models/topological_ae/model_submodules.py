@@ -320,7 +320,7 @@ class ConvTAE_def(AutoencoderModel):
     """Convolutional Topological Autoencoder - definitive version"""
     def __init__(
         self,
-        input_dims=(1, 180),
+        input_dims=(1, 180), # (6, 30) tambien funciona con input_dims[0] 
         latent_dim=10,
         num_CL=3, # 2 a 5
         size_CL=12, # 4 a 24
@@ -347,7 +347,7 @@ class ConvTAE_def(AutoencoderModel):
             # All convolutional layers (only sizes)
             conv_layers = [(size_CL, size_CL) for i in range(num_CL)]
             # Editing first convolutional layer
-            conv_layers[0] = (1, size_CL)
+            conv_layers[0] = (input_dims[0], size_CL)
             # Updating encoder layers
             for pair in conv_layers:
                 layer = nn.Conv1d(
@@ -408,7 +408,7 @@ class ConvTAE_def(AutoencoderModel):
         if num_CL != 0:
             conv_layers = [(size_CL, size_CL) for i in range(num_CL)]
             # Editing last convolutional layer
-            conv_layers[-1] = (size_CL, 1)
+            conv_layers[-1] = (size_CL, input_dims[0])
             # Updating decoder layers
             for pair in conv_layers:
                 layer = nn.ConvTranspose1d(

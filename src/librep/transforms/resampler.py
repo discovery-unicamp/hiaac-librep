@@ -12,7 +12,6 @@ class SimpleResampler(Transform):
     ----------
     new_sample_size : int
         The new number of points.
-
     """
 
     def __init__(self, new_sample_size: int):

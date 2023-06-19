@@ -71,7 +71,7 @@ class TopologicalDimensionalityReduction(Transform):
         # ----------------------------------------------
         # When the input is 2d:
         # ----------------------------------------------
-        original_dim = X.shape[1]
+        original_dim = X.shape[-1]
         # self.model_start_dim = original_dim
         # Setting self.input_shape
         self.input_shape = (-1, 1, original_dim)
@@ -82,7 +82,10 @@ class TopologicalDimensionalityReduction(Transform):
         # ----------------------------------------------
         # When the input is 3d (length, dim1, dim2): TODO
         # ----------------------------------------------
-        
+        if len(X.shape) == 3:
+            self.input_shape = (-1, X.shape[1], original_dim)
+            self.ae_kwargs['input_dims'] = (X.shape[1], original_dim)
+
         # Initializing all
         self.model = TopologicallyRegularizedAutoencoder(
             autoencoder_model=self.model_name,
