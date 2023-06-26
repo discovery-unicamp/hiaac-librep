@@ -125,7 +125,7 @@ class TopologicalDimensionalityReduction(Transform):
             batch_size=self.batch_size,
             shuffle=True
         )
-        patience = self.patience
+        patience_counter = 0
         max_loss = self.max_loss
         # Preparing for plot
         self.train_final_error = []
@@ -138,6 +138,7 @@ class TopologicalDimensionalityReduction(Transform):
         # Setting cuda
         # cuda0 = torch.device('cuda:0')
         for epoch in tqdm(range(self.num_epochs)):
+            patience_counter += 1
             epoch_number = self.current['epoch'] + 1
             epoch_train_loss = []
             epoch_train_ae_loss = []
@@ -199,13 +200,20 @@ class TopologicalDimensionalityReduction(Transform):
                 # shutil.copyfile(self.save_dir + best_file_name, self.save_dir + '')
             
             # Update max loss allowed: if None, then copy from loss_per_epoch
-            max_loss = max_loss or loss_per_epoch
+            # print('\n', max_loss, loss_per_epoch)
+            # Check if max_loss is None
+            if max_loss is None:
+                max_loss = loss_per_epoch
+
+            # max_loss = max_loss or loss_per_epoch
             # If this model beats the better found until now:
             if loss_per_epoch < max_loss:
+                patience_counter = 0
+                # print('\nLOSS < MAX', max_loss, loss_per_epoch)
                 # print('MAXLOSS update from', max_loss, 'to', loss_per_epoch, random_number)
                 # If LAST model was already created, delete it
-                if os.path.exists(best_file_name):
-                    os.remove(best_file_name)
+                # if os.path.exists(best_file_name):
+                #     os.remove(best_file_name)
                 # Save the new LAST model
                 self.partial_save(name=best_file_name)
                 # Update max_loss
@@ -216,16 +224,10 @@ class TopologicalDimensionalityReduction(Transform):
             ae_loss_per_epoch = np.mean(epoch_val_ae_loss)
             topo_loss_per_epoch = np.mean(epoch_val_topo_error)
             if self.verbose:
-                print(f'Epoch:{epoch+1}, P:{patience}, Loss:{loss_per_epoch:.4f}, Loss-ae:{ae_loss_per_epoch:.4f}, Loss-topo:{topo_loss_per_epoch:.4f}')
+                print(f'Epoch:{epoch+1}, P:{patience_counter}, Loss:{loss_per_epoch:.4f}, Loss-ae:{ae_loss_per_epoch:.4f}, Loss-topo:{topo_loss_per_epoch:.4f}')
             # Handle patience
-            if self.patience:
-                if max_loss < loss_per_epoch:
-                    if patience == 0:
-                        break
-                    patience -= 1
-                else:
-                    max_loss = loss_per_epoch
-                    patience = self.patience
+            if self.patience and patience_counter > self.patience:
+                break
         # Update to the best version found
         self.partial_load(name=best_file_name)
         # Erase the temporal file
