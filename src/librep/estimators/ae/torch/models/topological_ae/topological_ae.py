@@ -15,7 +15,6 @@ class TopologicallyRegularizedAutoencoder(AutoencoderModel):
             ae_kwargs: Kewords to pass to `ConvolutionalAutoencoder` class
             toposig_kwargs: Keywords to pass to `TopologicalSignature` class
         """
-        print('Topologically Regularized', autoencoder_model)
         super().__init__()
         self.lam = lam
         ae_kwargs = ae_kwargs if ae_kwargs else {}
@@ -59,8 +58,6 @@ class TopologicallyRegularizedAutoencoder(AutoencoderModel):
 
         # Use reconstruction loss of autoencoder
         ae_loss, ae_loss_comp = self.autoencoder(x)
-#         print('TEST'*20)
-#         print(self.topo_sig(x_distances, latent_distances))
         topo_error, topo_error_components = self.topo_sig(
             x_distances, latent_distances)
 

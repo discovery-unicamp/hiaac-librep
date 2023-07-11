@@ -13,6 +13,7 @@ import pickle
 import random
 import os
 import shutil
+from copy import deepcopy
 
 
 class TopologicalDimensionalityReduction(Transform):
@@ -20,15 +21,10 @@ class TopologicalDimensionalityReduction(Transform):
     def __init__(
         self, ae_model='ConvolutionalAutoencoder', ae_kwargs=None,
         lam=1., patience=None, num_epochs=500, batch_size=64,
-        # input_shape=(-1, 1, 28, 28),
         cuda_device_name='cuda:0',
-        # start_dim=180,
         latent_dim=10,
-        save_dir='data/', save_tag=0, save_frequency=250, verbose=False
+        save_dir='data/', save_tag=0, save_frequency=None, verbose=False
     ):
-        # os.environ['MASTER_ADDR'] = 'localhost'
-        # os.environ['MASTER_PORT'] = '12355'
-        # dist.init_process_group("gloo", rank=0, world_size=6)
         self.save_dir = save_dir
         self.save_tag = save_tag
         self.save_frequency = save_frequency
@@ -36,15 +32,14 @@ class TopologicalDimensionalityReduction(Transform):
         self.num_epochs = num_epochs
         self.model_name = ae_model
         self.model_lambda = lam
-        # self.model_start_dim = start_dim
         self.model_latent_dim = latent_dim
         self.ae_kwargs = ae_kwargs
         self.verbose = verbose
         # Setting cuda device
         self.cuda_device = torch.device(cuda_device_name)
         self.batch_size = batch_size
-        # self.input_shape = input_shape
         self.max_loss = None
+        
         self.current = {
             'epoch': 0,
             'train_recon_error': None,
@@ -91,6 +86,7 @@ class TopologicalDimensionalityReduction(Transform):
             autoencoder_model=self.model_name,
             lam=self.model_lambda, ae_kwargs=self.ae_kwargs
         )
+        self.model_best_state_dict = deepcopy(self.model.state_dict())
         self.model.to(self.cuda_device)
         # Optimizer
         self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
@@ -137,6 +133,7 @@ class TopologicalDimensionalityReduction(Transform):
         self.val_topo_error = []
         # Setting cuda
         # cuda0 = torch.device('cuda:0')
+        
         for epoch in tqdm(range(self.num_epochs)):
             patience_counter += 1
             epoch_number = self.current['epoch'] + 1
@@ -189,19 +186,15 @@ class TopologicalDimensionalityReduction(Transform):
             # Check if loss is nan
             if np.isnan(loss_per_epoch):
                 if self.verbose:
-                    print('Loss is nan, breaking')
+                    print('Loss is nan, stopping the training')
                 break
 
             # Check for save the BEST version every "n" epochs: save frequency
             # assuming there is already a best version called "best_file_name"
-            if epoch_number % self.save_frequency == 0:
+            if self.save_frequency and epoch_number % self.save_frequency == 0:
                 self.partial_save(reuse_file=best_file_name)
-                # Copy the file and rename it:
-                # shutil.copyfile(self.save_dir + best_file_name, self.save_dir + '')
             
-            # Update max loss allowed: if None, then copy from loss_per_epoch
-            # print('\n', max_loss, loss_per_epoch)
-            # Check if max_loss is None
+            # If max_loss is None, then adopt the value from loss_per_epoch
             if max_loss is None:
                 max_loss = loss_per_epoch
 
@@ -209,13 +202,11 @@ class TopologicalDimensionalityReduction(Transform):
             # If this model beats the better found until now:
             if loss_per_epoch < max_loss:
                 patience_counter = 0
-                # print('\nLOSS < MAX', max_loss, loss_per_epoch)
-                # print('MAXLOSS update from', max_loss, 'to', loss_per_epoch, random_number)
-                # If LAST model was already created, delete it
-                # if os.path.exists(best_file_name):
-                #     os.remove(best_file_name)
+                # Save the model_state
+                self.model_best_state_dict = deepcopy(self.model.state_dict())
+
                 # Save the new LAST model
-                self.partial_save(name=best_file_name)
+                # self.partial_save(name=best_file_name)
                 # Update max_loss
                 max_loss = loss_per_epoch
                 if self.verbose:
@@ -228,10 +219,11 @@ class TopologicalDimensionalityReduction(Transform):
             # Handle patience
             if self.patience and patience_counter > self.patience:
                 break
+        self.model.load_state_dict(self.model_best_state_dict)
         # Update to the best version found
-        self.partial_load(name=best_file_name)
+        # self.partial_load(name=best_file_name)
         # Erase the temporal file
-        os.remove(self.save_dir + best_file_name)
+        # os.remove(self.save_dir + best_file_name)
         return self
     
     def plot_training(self, title_plot=None):
@@ -371,21 +363,16 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
                  model_name='ConvTAE_def',
                  model_lambda=1,
                  patience=None,
-                 num_epochs=175,
-                #  start_dim=180,
+                 num_epochs=2000,
                  latent_dim=2,
                  batch_size=64,
                  cuda_device_name='cuda:0',
                  extra_properties={},
-                 save_dir='data/', save_tag=0, save_frequency=250):
+                 save_dir='data/', save_tag=0, save_frequency=None):
         ae_kwargs = {
-            # 'input_dims': (1, start_dim),
             'latent_dim': latent_dim
         }
         ae_kwargs.update(extra_properties)
-        # input_shape = (-1, 1, start_dim)
-        # if ae_kwargs['num_CL'] == 0:
-            # input_shape = (-1, start_dim)
         super().__init__(
             ae_model=model_name,
             ae_kwargs=ae_kwargs,
@@ -393,9 +380,7 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
             patience=patience,
             num_epochs=num_epochs,
             batch_size=batch_size,
-            # input_shape=input_shape,
             cuda_device_name=cuda_device_name,
-            # start_dim=start_dim,
             latent_dim=latent_dim,
             save_dir=save_dir,
             save_tag=save_tag,

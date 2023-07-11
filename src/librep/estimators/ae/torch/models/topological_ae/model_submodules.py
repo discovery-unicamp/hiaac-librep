@@ -316,6 +316,74 @@ class DeepAEforKuhar180ver3(AutoencoderModel):
         return reconst_error, {'reconstruction_error': reconst_error}
 
 
+class MaskedConvTAE(AutoencoderModel):
+    """Masked Convolutional Topological Autoencoder."""
+    def __init__(self):
+        super().__init__()
+        self.num_CL = 4
+        self.size_CL = 12
+        self.num_HL = 4
+        self.size_HL = 50
+        self.latent_dim = 10
+        self.masking_ratio = 0.5
+        self.encoder_properties = {
+            'masking_ratio': 0.5,
+            'num_CL': 4,
+            'size_CL': 12,
+            'num_HL': 4,
+            'size_HL': 50,
+            'latent_dim': 10
+        }
+        self.decoder_properties = {
+            'num_HL': 3,
+            'size_HL': 50
+        }
+        self.encoder = nn.Sequential(
+            nn.Linear(180, self.latent_dim // 2),
+            nn.ReLU()
+        )
+        self.decoder = nn.Sequential(
+            nn.Linear(self.latent_dim, 180),
+            nn.Sigmoid()
+        )
+    
+    def encode(self, x):
+        """Compute latent representation using the autoencoder."""
+        return self.encoder(x)
+    
+    def decode(self, z):
+        """Compute reconstruction using the autoencoder."""
+        return self.decoder(z)
+    
+    def forward(self, x):
+        """Apply autoencoder to batch of input images.
+        Args:
+            x: Batch of images with shape [bs x channels x n_row x n_col]
+        Returns:
+            tuple(reconstruction_error, dict(other errors))
+        """
+        # Apply masking
+        x_masked = self.mask(x)
+
+        latent = self.encode(x)
+        x_reconst = self.decode(latent)
+        reconst_error = self.reconst_error(x, x_reconst)
+        return reconst_error, {'reconstruction_error': reconst_error}
+    
+    def mask(self, x):
+        """Apply masking to the input."""
+        # Compute the number of elements to mask
+        num_elements = int(self.masking_ratio * x.shape[1])
+        # Compute the indices to mask
+        indices = np.random.choice(x.shape[1], num_elements, replace=False)
+        # Create the mask
+        mask = torch.ones(x.shape[1])
+        mask[indices] = 0
+        # Apply the mask
+        x_masked = x * mask
+        return x_masked
+        
+
 class ConvTAE_def(AutoencoderModel):
     """Convolutional Topological Autoencoder - definitive version"""
     def __init__(
@@ -325,13 +393,15 @@ class ConvTAE_def(AutoencoderModel):
         num_CL=3, # 2 a 5
         size_CL=12, # 4 a 24
         num_HL=3, # 2 a 5
-        size_HL=50
+        size_HL=50,
+        down_HL=0,
+        kernel_size=5
     ):
         """Convolutional Autoencoder."""
-        print('ConvTAE, Input:', input_dims,'Latent dim:', latent_dim)
+        # print('ConvTAE, Input:', input_dims,'Latent dim:', latent_dim, 'CL,HL', num_CL, size_CL, num_HL, size_HL)
         super().__init__()
         # Size of the connection between conv-hidden / hidden-conv
-        connection_size = size_CL*(input_dims[1]-num_CL*4)
+        connection_size = size_CL*(input_dims[1]-num_CL*(kernel_size-1))
         if num_CL == 0:
             connection_size = input_dims[1]
         # Defining the list of layers to use
@@ -353,7 +423,7 @@ class ConvTAE_def(AutoencoderModel):
                 layer = nn.Conv1d(
                     in_channels=pair[0],
                     out_channels=pair[1],
-                    kernel_size=5,
+                    kernel_size=kernel_size,
                     stride=1,
                     padding=0
                 )
@@ -365,11 +435,11 @@ class ConvTAE_def(AutoencoderModel):
         # HIDDEN LAYERS ------------------------------------------------
         # --------------------------------------------------------------
         # All hidden layers (only sizes)
-        hidden_layers = [(size_HL, size_HL) for i in range(num_HL)]
+        hidden_layers = [(size_HL-(i-1)*down_HL, size_HL-i*down_HL) for i in range(num_HL)]
         # First layer (last of convolutional layers)
         hidden_layers[0] = (connection_size, size_HL)
         # Last layer (low dimensionality)
-        hidden_layers[-1] = (size_HL, latent_dim)
+        hidden_layers[-1] = (size_HL-(num_HL-2)*down_HL, latent_dim)
         # Updating encoder layers
         for pair in hidden_layers:
             layer = nn.Linear(pair[0], pair[1])
@@ -385,9 +455,9 @@ class ConvTAE_def(AutoencoderModel):
         # HIDDEN LAYERS ------------------------------------------------
         # --------------------------------------------------------------
         # All hidden layers (only sizes)
-        hidden_layers = [(size_HL, size_HL) for i in range(num_HL)]
+        hidden_layers = [(size_HL-(num_HL-i)*down_HL, size_HL-(num_HL-i+1)*down_HL) for i in range(num_HL)]
         # First layer (low dimensionality)
-        hidden_layers[0] = (latent_dim, size_HL)
+        hidden_layers[0] = (latent_dim, size_HL-(num_HL-2)*down_HL)
         # Last layer (first of convolutional layers)
         hidden_layers[-1] = (size_HL, connection_size)
         # Updating decoder layers
@@ -398,7 +468,7 @@ class ConvTAE_def(AutoencoderModel):
         # Adding the "View" view before the last ReLU()
         if num_CL != 0:
             last_relu = decoder_list_layers.pop()
-            decoder_list_layers.append(View((-1, size_CL, input_dims[1]-num_CL*4)))
+            decoder_list_layers.append(View((-1, size_CL, input_dims[1]-num_CL*(kernel_size-1))))
             decoder_list_layers.append(last_relu)
         # --------------------------------------------------------------
         # CONVOLUTIONAL LAYERS -----------------------------------------
@@ -414,7 +484,7 @@ class ConvTAE_def(AutoencoderModel):
                 layer = nn.ConvTranspose1d(
                     in_channels=pair[0],
                     out_channels=pair[1],
-                    kernel_size=5,
+                    kernel_size=kernel_size,
                     stride=1,
                     padding=0
                 )
@@ -422,7 +492,7 @@ class ConvTAE_def(AutoencoderModel):
                 decoder_list_layers.append(nn.ReLU())
         # Build the decoder
         self.decoder = nn.Sequential(*decoder_list_layers)
-        # print(self.encoder)
+        # print(self.encoder, '\n')
         # print(self.decoder)
         self.reconst_error = nn.MSELoss()
         
