@@ -28,15 +28,15 @@ class Estimator(Parametrizable):
             (n_samples, n_features).
         y : ArrayLike
             The respective train labels, with shape: (n_samples, ). This parameter is
-            optional and may be used if needed.
+            optional and may be used if needed. By default None.
         X_val : ArrayLike
             An array-like representing the whole validation dataset with shape:
-            (n_samples, n_features). This parameter is optional and may be used
-            if needed.
+            (k_samples, n_features). This parameter is optional and may be used
+            if needed. By default None.
         y_val : ArrayLike
-            The respective validation labels, with shape: (n_samples, ). This
-            parameter is optional and may be used if needed.
-        **estimator_params : type
+            The respective validation labels, with shape: (k_samples, ). This
+            parameter is optional and may be used if needed. By default None.
+        **estimator_params : Any
             Optional data-dependent parameters.
 
         Returns
@@ -45,8 +45,7 @@ class Estimator(Parametrizable):
             The estimator (self).
 
         """
-
-        raise NotImplementedError
+        return self
 
     def predict(self, X: ArrayLike) -> ArrayLike:
         """Predict or project the values of the samples (X).
@@ -71,7 +70,7 @@ class Estimator(Parametrizable):
         X: ArrayLike,
         y: ArrayLike = None,
         X_val: ArrayLike = None,
-        y_val=None,
+        y_val: ArrayLike = None,
         **estimator_params,
     ) -> ArrayLike:
         """Chain fit and predict methods, togheter. It fits the model and
@@ -80,18 +79,18 @@ class Estimator(Parametrizable):
         Parameters
         ----------
         X : ArrayLike
-            An array-like representing the whole dataset with shape:
+            An array-like representing the whole training dataset with shape:
             (n_samples, n_features).
         y : ArrayLike
-            The respective labels, with shape: (n_samples, ). This parameter is
-            optional and may be used if needed.
+            The respective training labels, with shape: (n_samples, ). This parameter is
+            optional and may be used if needed. By default None.
         X_val : ArrayLike
             An array-like representing the whole validation dataset with shape:
-            (n_samples, n_features). This parameter is optional and may be used
-            if needed.
+            (k_samples, n_features). This parameter is optional and may be used
+            if needed. By default None.
         y_val : ArrayLike
-            The respective validation labels, with shape: (n_samples, ). This
-            parameter is optional and may be used if needed.
+            The respective validation labels, with shape: (k_samples, ). This
+            parameter is optional and may be used if needed. By default None.
         **estimator_params : type
             Optional data-dependent parameters.
 
