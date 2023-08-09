@@ -1,4 +1,4 @@
-from librep.config.type_definitions import ArrayLike
+from librep.config.type_definitions import ArrayLike, PathLike
 from librep.base.parametrizable import Parametrizable
 
 
@@ -103,3 +103,26 @@ class Estimator(Parametrizable):
         """
         self.fit(X, y, X_val, y_val, **estimator_params)
         return self.predict(X)
+
+    def save(self, output_path: PathLike) -> None:
+        """Save the estimator to a file.
+
+        Parameters
+        ----------
+        output_path : PathLike
+            The path to save the estimator.
+
+        """
+        raise NotImplementedError
+    
+    @classmethod
+    def load(cls, input_path: PathLike) -> "Estimator":
+        """Load the estimator from a file.
+
+        Parameters
+        ----------
+        input_path : PathLike
+            The path to load the estimator.
+
+        """
+        raise NotImplementedError
