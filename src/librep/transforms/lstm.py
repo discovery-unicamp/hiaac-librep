@@ -60,19 +60,19 @@ def save_plot(loss, acc, dataset_name):
   ax2.plot(acc['val'], label='validation')
   ax2.set_title('Accuracy')
   ax2.legend()
-  plt.savefig('./lstm_plots/' + dataset_name + '.png')
+  plt.savefig('./plots/lstm_' + dataset_name + '.png')
   plt.close(fig)
  
 class LSTMTrainer(Transform):
   def __init__(self, weight_file=None, n_epochs=40, learning_rate=1e-4,
-               batch_size=32, latent_dim=20, n_classes=7, n_layers=1,
+               batch_size=32, hidden_size=20, n_classes=7, n_layers=1,
                sequence_length=60, input_size=6, patience=5):
     assert weight_file is not None, 'weight_file must be specified'
     
     self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     self.input_size = input_size
     self.sequence_length = sequence_length
-    self.model = TrainingModule(LSTM(latent_dim=latent_dim, device=self.device, n_layers=n_layers, input_size=input_size), n_classes=n_classes)
+    self.model = TrainingModule(LSTM(latent_dim=hidden_size, device=self.device, n_layers=n_layers, input_size=input_size), n_classes=n_classes)
     self.epochs = n_epochs
     self.lr = learning_rate
     self.batch_size = batch_size
@@ -88,12 +88,14 @@ class LSTMTrainer(Transform):
   
   def __one_epoch(self, dataloader: DataLoader, mode='train'):
     cumulative_loss = 0
+    cumulative_corrects = 0
     loss_counter = 0
     for inputs, labels in dataloader:
       inputs = inputs.float().to(self.device)
       labels = labels.type(torch.LongTensor).to(self.device)
       # zero the parameter gradients
       self.optimizer.zero_grad()
+      
       if mode == 'train':
         self.model.train()
         outputs = self.model(inputs.float())
@@ -104,9 +106,16 @@ class LSTMTrainer(Transform):
         self.model.eval()
         outputs = self.model(inputs.float())
         loss = self.criterion(outputs, labels)
+      
+      # calculating loss
       cumulative_loss += loss.item() * inputs.size(0)
       loss_counter += 1
-    return cumulative_loss / loss_counter
+      
+      # calculating acc
+      _, preds = torch.max(outputs, 1)  
+      cumulative_corrects += torch.sum(preds == labels.data )
+    
+    return cumulative_loss / loss_counter, cumulative_corrects
   
   def _training_loop(self, train_dataloader, val_dataloader):  
     ############### Training setup ##############
@@ -134,8 +143,13 @@ class LSTMTrainer(Transform):
       # if 'validation' in dataloaders:
       validation_loss = self.__one_epoch(val_dataloader, mode='validation')
       print(f'EPOCH:{epoch} VALIDATION loss: {validation_loss:.4f}')
+      
       epoch_loss_val.append(validation_loss)
       epoch_loss_train.append(train_loss)
+      
+      # calculating accuracies
+      
+      
       print('-' * 10)
       if validation_loss < loss_threshold:
         patience_counter = 0
