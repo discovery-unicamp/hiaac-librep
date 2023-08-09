@@ -1,4 +1,5 @@
 from .fft import *
+from .lstm import *
 from .resampler import *
 from .umap import *
 from .tsne import *

@@ -45,9 +45,23 @@ class TrainingModule(nn.Module):
 #########################################################################
 # Trainer pre-trains the LSTM and saves the weights
 #########################################################################
+import matplotlib.pyplot as plt
 from librep.base.transform import Transform 
 from torch.utils.data import TensorDataset, DataLoader
 from torch.optim import Adam
+
+def save_plot(loss, acc, dataset_name):
+  fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+  ax1.plot(loss['train'], label='train')
+  ax1.plot(loss['val'], label='validation')
+  ax1.set_title('Loss')
+  ax1.legend()
+  ax2.plot(acc['train'], label='train')
+  ax2.plot(acc['val'], label='validation')
+  ax2.set_title('Accuracy')
+  ax2.legend()
+  plt.savefig('./lstm_plots/' + dataset_name + '.png')
+  plt.close(fig)
  
 class LSTMTrainer(Transform):
   def __init__(self, weight_file=None, n_epochs=40, learning_rate=1e-4,
@@ -169,6 +183,9 @@ class LSTMTrainer(Transform):
     self.model = self._training_loop(train_dataloader, val_dataloader)
     self.reducer = self.model.lstm
     
+    # saving plots
+    save_plot(self.losses, self.accs, self.fit_dataset)
+      
     # saving weights
     torch.save(self.reducer.state_dict(), './lstm_weights/lstm_weights_' + self.fit_dataset + '.pt')
     print(f'weights saved to ./lstm_weights/lstm_weights_{self.fit_dataset}.pt')
