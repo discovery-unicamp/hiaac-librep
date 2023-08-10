@@ -113,9 +113,9 @@ class LSTMTrainer(Transform):
       
       # calculating acc
       _, preds = torch.max(outputs, 1)  
-      cumulative_corrects += torch.sum(preds == labels.data )
+      cumulative_corrects += torch.sum(preds == labels.data)
     
-    return cumulative_loss / loss_counter, cumulative_corrects
+    return cumulative_loss / loss_counter, cumulative_corrects.cpu().double() / len(dataloader.dataset)
   
   def _training_loop(self, train_dataloader, val_dataloader):  
     ############### Training setup ##############
@@ -138,12 +138,14 @@ class LSTMTrainer(Transform):
 
     for epoch in range(self.epochs):
       patience_counter += 1
-      train_loss = self.__one_epoch(train_dataloader, mode='train')
+      train_loss, train_acc = self.__one_epoch(train_dataloader, mode='train')
       print(f'EPOCH:{epoch} TRAIN loss: {train_loss:.4f}')
       # if 'validation' in dataloaders:
-      validation_loss = self.__one_epoch(val_dataloader, mode='validation')
+      validation_loss, val_acc = self.__one_epoch(val_dataloader, mode='validation')
       print(f'EPOCH:{epoch} VALIDATION loss: {validation_loss:.4f}')
       
+      epoch_acc_train.append(train_acc)
+      epoch_acc_val.append(val_acc)
       epoch_loss_val.append(validation_loss)
       epoch_loss_train.append(train_loss)
       
