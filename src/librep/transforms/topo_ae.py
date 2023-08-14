@@ -14,6 +14,7 @@ import random
 import os
 import shutil
 from copy import deepcopy
+from torch.utils.data import TensorDataset, DataLoader
 
 
 class TopologicalDimensionalityReduction(Transform):
@@ -23,7 +24,7 @@ class TopologicalDimensionalityReduction(Transform):
         lam=1., patience=None, num_epochs=500, batch_size=64,
         cuda_device_name='cuda:0',
         latent_dim=10,
-        save_dir='data/', save_tag=0, save_frequency=None, verbose=False
+        save_dir='data/', save_tag=0, save_frequency=None, verbose=True
     ):
         self.save_dir = save_dir
         self.save_tag = save_tag
@@ -38,7 +39,6 @@ class TopologicalDimensionalityReduction(Transform):
         # Setting cuda device
         self.cuda_device = torch.device(cuda_device_name)
         self.batch_size = batch_size
-        self.max_loss = None
         
         self.current = {
             'epoch': 0,
@@ -59,8 +59,39 @@ class TopologicalDimensionalityReduction(Transform):
             'val_topo_error': [],
             'val_error': []
         }
+    
+    def __one_epoch(self, data_loader: DataLoader, train_mode=True):
+        cumulative_ae_loss = 0
+        cumulative_topo_loss = 0
+        cumulative_loss = 0
+        epoch_loss_counter = 0
+        for inputs, labels in data_loader:
+            inputs = inputs.float().to(self.cuda_device)
+            if train_mode:
+                self.model.train()
+                loss, loss_components = self.model(inputs)
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+            else:
+                self.model.eval()
+                loss, loss_components = self.model(inputs)
+            cumulative_loss += loss.item() * inputs.size(0)
+            cumulative_ae_loss += loss_components['loss.autoencoder'].item() * inputs.size(0)
+            cumulative_topo_loss += loss_components['loss.topo_error'].item() * inputs.size(0)
+            epoch_loss_counter += 1
+        return (
+            cumulative_loss / epoch_loss_counter,
+            cumulative_ae_loss / epoch_loss_counter,
+            cumulative_topo_loss / epoch_loss_counter
+        )
+
+
 
     def fit(self, X: ArrayLike, y: ArrayLike = None, X_val: ArrayLike = None, y_val: ArrayLike = None):
+        if X_val is None:
+            X, X_val, y, y_val = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+        
         # Computing input dimensions for the model
         # in the second dim of X.shape
         # ----------------------------------------------
@@ -81,48 +112,38 @@ class TopologicalDimensionalityReduction(Transform):
             self.input_shape = (-1, X.shape[1], original_dim)
             self.ae_kwargs['input_dims'] = (X.shape[1], original_dim)
 
+        # Modifying the data into the input_shape
+        x_train = torch.reshape(torch.Tensor(X), self.input_shape)
+        y_train = torch.Tensor(np.array(y))
+        x_val = torch.reshape(torch.Tensor(X_val), self.input_shape)
+        y_val = torch.Tensor(np.array(y_val))
+
         # Initializing all
         self.model = TopologicallyRegularizedAutoencoder(
             autoencoder_model=self.model_name,
             lam=self.model_lambda, ae_kwargs=self.ae_kwargs
         )
-        self.model_best_state_dict = deepcopy(self.model.state_dict())
-        self.model.to(self.cuda_device)
+        # self.model_best_state_dict = deepcopy(self.model.state_dict())
+        self.model = self.model.to(self.cuda_device)
         # Optimizer
-        self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
+        # self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
+        self.optimizer = Adam(self.model.parameters(), lr=1e-5, weight_decay=0)
         
-        # Save file name
-        random_number = random.randint(1000, 9999)
-        best_file_name = '{}_{}_{}_{}'.format(
-            self.model_name, random_number, self.model_lambda, self.save_tag)
-        best_file_name = best_file_name + '.toerase' # custom extension
-        
-        # First assignation
-        train_X = X
-        train_Y = y
-        val_X = X_val
-        val_Y = y_val
-        
-        # If it is None, then update
-        if val_X is None:
-            # Splitting X into train and validation
-            train_X, val_X, train_Y, val_Y = train_test_split(
-                X, y, random_state=0,
-                train_size=.8,
-                stratify=y
-            )
-        train_data_loader = torch.utils.data.DataLoader(
-            dataset=train_X,
+        # Setting data loaders
+        train_data_loader = DataLoader(
+            dataset=TensorDataset(x_train, y_train),
             batch_size=self.batch_size,
-            shuffle=True
+            shuffle=True,
+            # drop_last=True
         )
-        val_data_loader = torch.utils.data.DataLoader(
-            dataset=val_X,
+        val_data_loader = DataLoader(
+            dataset=TensorDataset(x_val, y_val),
             batch_size=self.batch_size,
-            shuffle=True
+            shuffle=True,
+            # drop_last=True
         )
         patience_counter = 0
-        max_loss = self.max_loss
+        loss_threshold = np.inf
         # Preparing for plot
         self.train_final_error = []
         self.train_recon_error = []
@@ -137,44 +158,50 @@ class TopologicalDimensionalityReduction(Transform):
         for epoch in tqdm(range(self.num_epochs)):
             patience_counter += 1
             epoch_number = self.current['epoch'] + 1
-            epoch_train_loss = []
-            epoch_train_ae_loss = []
-            epoch_train_topo_error = []
-            epoch_val_loss = []
-            epoch_val_ae_loss = []
-            epoch_val_topo_error = []
-            self.model.train()
-            for data in train_data_loader:
-                # reshaped_data = np.reshape(data, self.input_shape)
-                # in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
-                in_tensor = torch.reshape(data, self.input_shape)
-                in_tensor = in_tensor.to(self.cuda_device)
-                in_tensor = in_tensor.float()
-                loss, loss_components = self.model(in_tensor)
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                epoch_train_loss.append(loss.item())
-                epoch_train_ae_loss.append(loss_components['loss.autoencoder'].item())
-                epoch_train_topo_error.append(loss_components['loss.topo_error'].item())
-            # Verificar despues self.model()
-            for data in val_data_loader:
-                # reshaped_data = np.reshape(data, self.input_shape)
-                # in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
-                in_tensor = torch.reshape(data, self.input_shape)
-                in_tensor = in_tensor.to(self.cuda_device)
-                in_tensor = in_tensor.float()
-                loss, loss_components = self.model(in_tensor)
-                epoch_val_loss.append(loss.item())
-                epoch_val_ae_loss.append(loss_components['loss.autoencoder'].item())
-                epoch_val_topo_error.append(loss_components['loss.topo_error'].item())
+            epoch_loss, epoch_ae_loss, epoch_topo_loss = self.__one_epoch(train_data_loader, train_mode=True)
+            self.current['train_recon_error'] = epoch_ae_loss # np.mean(epoch_train_ae_loss)
+            self.current['train_topo_error'] = epoch_topo_loss # np.mean(epoch_train_topo_error)
+            self.current['train_error'] = epoch_loss # np.mean(epoch_train_loss)
+            epoch_loss, epoch_ae_loss, epoch_topo_loss = self.__one_epoch(val_data_loader, train_mode=False)
+            self.current['val_recon_error'] = epoch_ae_loss # np.mean(epoch_val_ae_loss)
+            self.current['val_topo_error'] = epoch_topo_loss # np.mean(epoch_val_topo_error)
+            self.current['val_error'] = epoch_loss # np.mean(epoch_val_loss)
+            # epoch_train_loss = []
+            # epoch_train_ae_loss = []
+            # epoch_train_topo_error = []
+            # epoch_val_loss = []
+            # epoch_val_ae_loss = []
+            # epoch_val_topo_error = []
+            
+            # for inputs, labels in train_data_loader:
+            #     self.model.train()
+            #     in_tensor = inputs.float().to(self.cuda_device)
+            #     loss, loss_components = self.model(in_tensor.float())
+            #     self.optimizer.zero_grad()
+            #     loss.backward()
+            #     self.optimizer.step()
+            #     epoch_train_loss.append(loss.item())
+            #     epoch_train_ae_loss.append(loss_components['loss.autoencoder'].item())
+            #     epoch_train_topo_error.append(loss_components['loss.topo_error'].item())
+            # # Verificar despues self.model()
+            # for inputs, labels in val_data_loader:
+            #     self.model.eval()
+            #     # reshaped_data = np.reshape(data, self.input_shape)
+            #     # in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
+            #     # data = torch.reshape(data, self.input_shape).float()
+            #     in_tensor = inputs.float().to(self.cuda_device)
+            #     print(in_tensor.dtype)
+            #     loss, loss_components = self.model(in_tensor)
+            #     epoch_val_loss.append(loss.item())
+            #     epoch_val_ae_loss.append(loss_components['loss.autoencoder'].item())
+            #     epoch_val_topo_error.append(loss_components['loss.topo_error'].item())
             self.current['epoch'] = self.current['epoch'] + 1
-            self.current['train_recon_error'] = np.mean(epoch_train_ae_loss)
-            self.current['train_topo_error'] = np.mean(epoch_train_topo_error)
-            self.current['train_error'] = np.mean(epoch_train_loss)
-            self.current['val_recon_error'] = np.mean(epoch_val_ae_loss)
-            self.current['val_topo_error'] = np.mean(epoch_val_topo_error)
-            self.current['val_error'] = np.mean(epoch_val_loss)
+            # self.current['train_recon_error'] = np.mean(epoch_train_ae_loss)
+            # self.current['train_topo_error'] = np.mean(epoch_train_topo_error)
+            # self.current['train_error'] = np.mean(epoch_train_loss)
+            # self.current['val_recon_error'] = np.mean(epoch_val_ae_loss)
+            # self.current['val_topo_error'] = np.mean(epoch_val_topo_error)
+            # self.current['val_error'] = np.mean(epoch_val_loss)
             self.history['epoch'].append(self.current['epoch'])
             self.history['train_recon_error'].append(self.current['train_recon_error'])
             self.history['train_topo_error'].append(self.current['train_topo_error'])
@@ -183,6 +210,8 @@ class TopologicalDimensionalityReduction(Transform):
             self.history['val_topo_error'].append(self.current['val_topo_error'])
             self.history['val_error'].append(self.current['val_error'])
             loss_per_epoch = self.current['val_error']
+            ae_loss_per_epoch = self.current['val_recon_error']
+            topo_loss_per_epoch = self.current['val_topo_error']
             # Check if loss is nan
             if np.isnan(loss_per_epoch):
                 if self.verbose:
@@ -191,16 +220,16 @@ class TopologicalDimensionalityReduction(Transform):
 
             # Check for save the BEST version every "n" epochs: save frequency
             # assuming there is already a best version called "best_file_name"
-            if self.save_frequency and epoch_number % self.save_frequency == 0:
-                self.partial_save(reuse_file=best_file_name)
+            # if self.save_frequency and epoch_number % self.save_frequency == 0:
+            #     self.partial_save(reuse_file="best_file_name")
             
             # If max_loss is None, then adopt the value from loss_per_epoch
-            if max_loss is None:
-                max_loss = loss_per_epoch
+            # if max_loss is None:
+            #     max_loss = loss_per_epoch
 
             # max_loss = max_loss or loss_per_epoch
             # If this model beats the better found until now:
-            if loss_per_epoch < max_loss:
+            if loss_per_epoch < loss_threshold:
                 patience_counter = 0
                 # Save the model_state
                 self.model_best_state_dict = deepcopy(self.model.state_dict())
@@ -208,14 +237,15 @@ class TopologicalDimensionalityReduction(Transform):
                 # Save the new LAST model
                 # self.partial_save(name=best_file_name)
                 # Update max_loss
-                max_loss = loss_per_epoch
-                if self.verbose:
-                    print('Best result found at', self.current['epoch'])
-            loss_per_epoch = np.mean(epoch_val_ae_loss) + np.mean(epoch_val_topo_error)
-            ae_loss_per_epoch = np.mean(epoch_val_ae_loss)
-            topo_loss_per_epoch = np.mean(epoch_val_topo_error)
+                loss_threshold = loss_per_epoch
+                # if self.verbose:
+                    # print('Best result found at', self.current['epoch'])
+            # loss_per_epoch = np.mean(epoch_val_ae_loss) + np.mean(epoch_val_topo_error)
+            # ae_loss_per_epoch = np.mean(epoch_val_ae_loss)
+            # topo_loss_per_epoch = np.mean(epoch_val_topo_error)
             if self.verbose:
-                print(f'Epoch:{epoch+1}, P:{patience_counter}, Loss:{loss_per_epoch:.4f}, Loss-ae:{ae_loss_per_epoch:.4f}, Loss-topo:{topo_loss_per_epoch:.4f}')
+                print(f'Epoch:{epoch+1}, P:{patience_counter}, V Loss:{self.current["val_error"]:.4f}, Loss-ae:{self.current["val_recon_error"]:.4f}, Loss-topo:{self.current["val_topo_error"]:.4f}')
+                print(f'Epoch:{epoch+1}, P:{patience_counter}, T Loss:{self.current["train_error"]:.4f}, Loss-ae:{self.current["train_recon_error"]:.4f}, Loss-topo:{self.current["train_topo_error"]:.4f}')
             # Handle patience
             if self.patience and patience_counter > self.patience:
                 break
@@ -224,7 +254,7 @@ class TopologicalDimensionalityReduction(Transform):
         # self.partial_load(name=best_file_name)
         # Erase the temporal file
         # os.remove(self.save_dir + best_file_name)
-        return self
+        # return self.model
     
     def plot_training(self, title_plot=None):
         fig, ax = plt.subplots(figsize=(10,10))
