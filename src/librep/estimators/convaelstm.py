@@ -1,24 +1,21 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from sklearn.model_selection import train_test_split
 import numpy as np
 from copy import deepcopy
+
 from librep.estimators.models.convaelstm import ConvAELSTM_full
+from librep.base.estimator import Estimator
 
-
-#########################################################################
-# Trainer pre-trains the LSTM and saves the weights
-#########################################################################
-from librep.base.transform import Transform 
 from torch.utils.data import TensorDataset, DataLoader
-from torch.optim import Adam, SGD
+from torch.optim import Adam
  
-class ConvAELSTMTransform(Transform):
-  def __init__(self, weight_file=None, n_epochs=40, learning_rate=1e-3,
+class ConvAELSTMEstimator(Estimator):
+  def __init__(self, n_epochs=40, learning_rate=1e-3,
                batch_size=128, latent_dim=20, n_classes=7, n_layers=1,
                sequence_length=60, input_size=6, patience=5):
-    assert weight_file is not None, 'weight_file must be specified'
     
     self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     self.input_size = input_size
@@ -28,7 +25,6 @@ class ConvAELSTMTransform(Transform):
     self.epochs = n_epochs
     self.lr = learning_rate
     self.batch_size = batch_size
-    self.fit_dataset = weight_file
     self.patience = patience
 
     print('Using device:', self.device)
@@ -135,17 +131,11 @@ class ConvAELSTMTransform(Transform):
     
     ############### Start training loop ##############
     self.model = self._training_loop(train_dataloader, val_dataloader)
-    # self.reducer = self.model.lstm
     
     # saving weights
     #torch.save(self.model.state_dict(), './lstm_weights/lstm_weights_' + self.fit_dataset + '.pt')
     #print(f'weights saved to ./lstm_weights/lstm_weights_{self.fit_dataset}.pt')
     
-  def transform(self, X):
-    return self.model.reduce_dim(torch.Tensor(X).to(self.device)).cpu().detach().numpy()
-    # # X = self._reshapeToLSTM(torch.Tensor(X))
-    # X = torch.Tensor(X)
-    # X = X.float().to(self.device)
-    # reducer = self.reducer.float().to(self.device)
-    # h_n = reducer(X)
-    # return h_n.cpu().detach().numpy()
+  def predict(self, X):
+    X = torch.Tensor(X).float().to(self.device)
+    return self.model(X).cpu().detach().numpy()
