@@ -6,12 +6,28 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from copy import deepcopy
 
-from librep.estimators.models.convaelstm import ConvAELSTM_full
+from librep.estimators.models.convaelstm_modules import ConvAELSTM_full
 from librep.base.estimator import Estimator
 
 from torch.utils.data import TensorDataset, DataLoader
 from torch.optim import Adam
+
+import matplotlib.pyplot as plt
  
+def save_plot(loss, acc, n):
+  fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+  ax1.plot(loss['train'], label='train')
+  ax1.plot(loss['val'], label='validation')
+  ax1.set_title('Loss')
+  ax1.legend()
+  ax2.plot(acc['train'], label='train')
+  ax2.plot(acc['val'], label='validation')
+  ax2.set_title('Accuracy')
+  ax2.legend()
+  plt.savefig('./plots/convae-lstm_' + str(n) + '.png')
+  plt.close(fig)
+  return n+1
+  
 class ConvAELSTMEstimator(Estimator):
   def __init__(self, n_epochs=40, learning_rate=1e-3,
                batch_size=128, latent_dim=20, n_classes=7, n_layers=1,
@@ -26,6 +42,7 @@ class ConvAELSTMEstimator(Estimator):
     self.lr = learning_rate
     self.batch_size = batch_size
     self.patience = patience
+    self.n = 0
 
     print('Using device:', self.device)
     
@@ -36,13 +53,14 @@ class ConvAELSTMEstimator(Estimator):
   
   def __one_epoch(self, dataloader: DataLoader, mode='train'):
     cumulative_loss = 0
+    cumulative_corrects = 0
     loss_counter = 0
     for inputs, labels in dataloader:
       inputs = inputs.float().to(self.device)
-      print(inputs.dtype)
       labels = labels.type(torch.LongTensor).to(self.device)
       # zero the parameter gradients
       self.optimizer.zero_grad()
+      
       if mode == 'train':
         self.model.train()
         outputs = self.model(inputs.float())
@@ -53,9 +71,16 @@ class ConvAELSTMEstimator(Estimator):
         self.model.eval()
         outputs = self.model(inputs.float())
         loss = self.criterion(outputs, labels)
+      
+      # calculating loss
       cumulative_loss += loss.item() * inputs.size(0)
       loss_counter += 1
-    return cumulative_loss / loss_counter
+      
+      # calculating acc
+      _, preds = torch.max(outputs, 1)  
+      cumulative_corrects += torch.sum(preds == labels.data)
+    
+    return cumulative_loss / loss_counter, cumulative_corrects.cpu().double() / len(dataloader.dataset)
   
   def _training_loop(self, train_dataloader, val_dataloader):  
     ############### Training setup ##############
@@ -79,13 +104,16 @@ class ConvAELSTMEstimator(Estimator):
 
     for epoch in range(self.epochs):
       patience_counter += 1
-      train_loss = self.__one_epoch(train_dataloader, mode='train')
+      train_loss, train_acc = self.__one_epoch(train_dataloader, mode='train')
       print(f'EPOCH:{epoch} TRAIN loss: {train_loss:.4f}')
       # if 'validation' in dataloaders:
-      validation_loss = self.__one_epoch(val_dataloader, mode='validation')
+      validation_loss, val_acc = self.__one_epoch(val_dataloader, mode='validation')
       print(f'EPOCH:{epoch} VALIDATION loss: {validation_loss:.4f}')
+      epoch_acc_train.append(train_acc)
+      epoch_acc_val.append(val_acc)
       epoch_loss_val.append(validation_loss)
       epoch_loss_train.append(train_loss)
+      
       print('-' * 10)
       if validation_loss < loss_threshold:
         patience_counter = 0
@@ -111,9 +139,9 @@ class ConvAELSTMEstimator(Estimator):
       X, X_val, y, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
     ### Organizing data    
-    x_train = torch.Tensor(X)
+    x_train = torch.Tensor(X).reshape(-1, self.sequence_length, self.input_size).permute(0, 2, 1)
     y_train = torch.Tensor(np.array(y))
-    x_val = torch.Tensor(X_val)
+    x_val = torch.Tensor(X_val).reshape(-1, self.sequence_length, self.input_size).permute(0, 2, 1)
     y_val = torch.Tensor(np.array(y_val))
     
     train_dataloader = DataLoader(
@@ -132,10 +160,15 @@ class ConvAELSTMEstimator(Estimator):
     ############### Start training loop ##############
     self.model = self._training_loop(train_dataloader, val_dataloader)
     
+    # saving plots
+    self.n = save_plot(self.losses, self.accs, self.n)
+        
     # saving weights
     #torch.save(self.model.state_dict(), './lstm_weights/lstm_weights_' + self.fit_dataset + '.pt')
     #print(f'weights saved to ./lstm_weights/lstm_weights_{self.fit_dataset}.pt')
     
   def predict(self, X):
-    X = torch.Tensor(X).float().to(self.device)
-    return self.model(X).cpu().detach().numpy()
+    X = torch.Tensor(X).reshape(-1, self.sequence_length, self.input_size).permute(0, 2, 1).float().to(self.device)
+    outputs = self.model(X)
+    _, preds = torch.max(outputs, 1)
+    return preds.cpu().detach().numpy()

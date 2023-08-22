@@ -12,7 +12,7 @@ class ConvAELSTM_part_ConvAE(nn.Module):
             nn.MaxPool1d(kernel_size=kernel_size, stride=stride, padding=padding),
             nn.ConvTranspose1d(in_channels=filter_size,out_channels=n_channels,kernel_size=kernel_size,stride=stride,padding=padding),
             nn.ReLU())
-        print('MODEL', self.model)
+        #print('MODEL', self.model)
         
     def forward(self, x):
         return self.model(x)
@@ -32,8 +32,6 @@ class ConvAELSTM_part_LSTM(nn.Module):
         self.latent_dim=latent_dim
         
     def forward(self, x):
-        # h_0 = torch.zeros(self.n_layers, x.shape[0], self.latent_dim).float().to(self.device)
-        # c_0 = torch.zeros(self.n_layers, x.shape[0], self.latent_dim).float().to(self.device)
         h_n, _ = self.lstm(x)
         return h_n[:,-1] # returning the last hidden state
 
@@ -72,11 +70,13 @@ class ConvAELSTM_full(nn.Module):
         x = self.softmax(x)
         return x
     
-    def reduce_dim(self, x):
+    def reduce_dim(self, x, representation='lstm'):
         self.conv.eval()
         self.lstm.eval()
         print('x before conv', x.shape)
         x = self.conv(x)
         print('x after conv', x.shape)
+        if representation == 'autoencoder':
+            return x
         x = self.lstm(self._reshapeToLSTM(x))
         return x

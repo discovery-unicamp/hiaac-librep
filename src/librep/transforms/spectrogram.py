@@ -2,7 +2,6 @@ from librep.base.transform import Transform
 import numpy as np
 from scipy import signal
 
-
 class Spectrogram(Transform):
     def __init__(self, fs: int = 20, nperseg=20, nfft=None, window=("tukey", 0.25)):
         self.fs = fs
