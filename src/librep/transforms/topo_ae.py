@@ -22,7 +22,6 @@ class TopologicalDimensionalityReduction(Transform):
         lam=1., patience=None, num_epochs=500, batch_size=64,
         cuda_device_name='cuda:0',
         latent_dim=10,
-        optimizer_weight_decay=0, optimizer_lr=1e-5,
         save_dir='data/', save_tag=0, save_frequency=None, verbose=False
     ):
         self.save_dir = save_dir
@@ -35,8 +34,8 @@ class TopologicalDimensionalityReduction(Transform):
         self.model_latent_dim = latent_dim
         self.ae_kwargs = ae_kwargs
         self.verbose = verbose
-        self.optimizer_weight_decay = optimizer_weight_decay
-        self.optimizer_lr = optimizer_lr
+        self.optimizer_weight_decay = ae_kwargs['optimizer_weight_decay']
+        self.optimizer_lr = ae_kwargs['optimizer_lr']
         # Setting cuda device
         self.cuda_device = torch.device(cuda_device_name)
         self.batch_size = batch_size
@@ -349,7 +348,9 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
                  extra_properties={},
                  save_dir='data/', save_tag=0, save_frequency=None):
         ae_kwargs = {
-            'latent_dim': latent_dim
+            'latent_dim': latent_dim,
+            'optimizer_weight_decay': 0,
+            'optimizer_lr': 1e-5
         }
         ae_kwargs.update(extra_properties)
         super().__init__(
