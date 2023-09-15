@@ -36,6 +36,8 @@ class TopologicalDimensionalityReduction(Transform):
         self.verbose = verbose
         self.optimizer_weight_decay = ae_kwargs['optimizer_weight_decay']
         self.optimizer_lr = ae_kwargs['optimizer_lr']
+        del ae_kwargs['optimizer_weight_decay']
+        del ae_kwargs['optimizer_lr']
         # Setting cuda device
         self.cuda_device = torch.device(cuda_device_name)
         self.batch_size = batch_size
