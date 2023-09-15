@@ -65,7 +65,7 @@ class TopologicalDimensionalityReduction(Transform):
         cumulative_topo_loss = 0
         cumulative_loss = 0
         epoch_loss_counter = 0
-        for inputs, labels in data_loader:
+        for inputs, _ in data_loader:
             inputs = inputs.float().to(self.cuda_device)
             if train_mode:
                 self.model.train()
@@ -127,7 +127,7 @@ class TopologicalDimensionalityReduction(Transform):
         self.model = self.model.to(self.cuda_device)
         # Optimizer
         # self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
-        self.optimizer = Adam(self.model.parameters(), lr=1e-5, weight_decay=0)
+        self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=0)
         
         # Setting data loaders
         train_data_loader = DataLoader(
@@ -195,7 +195,7 @@ class TopologicalDimensionalityReduction(Transform):
             #     epoch_val_loss.append(loss.item())
             #     epoch_val_ae_loss.append(loss_components['loss.autoencoder'].item())
             #     epoch_val_topo_error.append(loss_components['loss.topo_error'].item())
-            self.current['epoch'] = self.current['epoch'] + 1
+            self.current['epoch'] += 1
             # self.current['train_recon_error'] = np.mean(epoch_train_ae_loss)
             # self.current['train_topo_error'] = np.mean(epoch_train_topo_error)
             # self.current['train_error'] = np.mean(epoch_train_loss)
@@ -210,8 +210,8 @@ class TopologicalDimensionalityReduction(Transform):
             self.history['val_topo_error'].append(self.current['val_topo_error'])
             self.history['val_error'].append(self.current['val_error'])
             loss_per_epoch = self.current['val_error']
-            ae_loss_per_epoch = self.current['val_recon_error']
-            topo_loss_per_epoch = self.current['val_topo_error']
+            # ae_loss_per_epoch = self.current['val_recon_error']
+            # topo_loss_per_epoch = self.current['val_topo_error']
             # Check if loss is nan
             if np.isnan(loss_per_epoch):
                 if self.verbose:
