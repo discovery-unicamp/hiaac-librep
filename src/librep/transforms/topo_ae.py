@@ -128,11 +128,7 @@ class TopologicalDimensionalityReduction(Transform):
         self.model = self.model.to(self.cuda_device)
         # Optimizer
         # self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
-<<<<<<< HEAD
-        self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=0)
-=======
         self.optimizer = Adam(self.model.parameters(), lr=self.optimizer_lr, weight_decay=self.optimizer_weight_decay)
->>>>>>> 1f8daba09f40205f00d8440490317fff96a0b439
         
         # Setting data loaders
         train_data_loader = DataLoader(
@@ -162,53 +158,6 @@ class TopologicalDimensionalityReduction(Transform):
         
         for epoch in tqdm(range(self.num_epochs)):
             patience_counter += 1
-<<<<<<< HEAD
-            epoch_number = self.current['epoch'] + 1
-            epoch_loss, epoch_ae_loss, epoch_topo_loss = self.__one_epoch(train_data_loader, train_mode=True)
-            self.current['train_recon_error'] = epoch_ae_loss # np.mean(epoch_train_ae_loss)
-            self.current['train_topo_error'] = epoch_topo_loss # np.mean(epoch_train_topo_error)
-            self.current['train_error'] = epoch_loss # np.mean(epoch_train_loss)
-            epoch_loss, epoch_ae_loss, epoch_topo_loss = self.__one_epoch(val_data_loader, train_mode=False)
-            self.current['val_recon_error'] = epoch_ae_loss # np.mean(epoch_val_ae_loss)
-            self.current['val_topo_error'] = epoch_topo_loss # np.mean(epoch_val_topo_error)
-            self.current['val_error'] = epoch_loss # np.mean(epoch_val_loss)
-            # epoch_train_loss = []
-            # epoch_train_ae_loss = []
-            # epoch_train_topo_error = []
-            # epoch_val_loss = []
-            # epoch_val_ae_loss = []
-            # epoch_val_topo_error = []
-            
-            # for inputs, labels in train_data_loader:
-            #     self.model.train()
-            #     in_tensor = inputs.float().to(self.cuda_device)
-            #     loss, loss_components = self.model(in_tensor.float())
-            #     self.optimizer.zero_grad()
-            #     loss.backward()
-            #     self.optimizer.step()
-            #     epoch_train_loss.append(loss.item())
-            #     epoch_train_ae_loss.append(loss_components['loss.autoencoder'].item())
-            #     epoch_train_topo_error.append(loss_components['loss.topo_error'].item())
-            # # Verificar despues self.model()
-            # for inputs, labels in val_data_loader:
-            #     self.model.eval()
-            #     # reshaped_data = np.reshape(data, self.input_shape)
-            #     # in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
-            #     # data = torch.reshape(data, self.input_shape).float()
-            #     in_tensor = inputs.float().to(self.cuda_device)
-            #     print(in_tensor.dtype)
-            #     loss, loss_components = self.model(in_tensor)
-            #     epoch_val_loss.append(loss.item())
-            #     epoch_val_ae_loss.append(loss_components['loss.autoencoder'].item())
-            #     epoch_val_topo_error.append(loss_components['loss.topo_error'].item())
-            self.current['epoch'] += 1
-            # self.current['train_recon_error'] = np.mean(epoch_train_ae_loss)
-            # self.current['train_topo_error'] = np.mean(epoch_train_topo_error)
-            # self.current['train_error'] = np.mean(epoch_train_loss)
-            # self.current['val_recon_error'] = np.mean(epoch_val_ae_loss)
-            # self.current['val_topo_error'] = np.mean(epoch_val_topo_error)
-            # self.current['val_error'] = np.mean(epoch_val_loss)
-=======
             # Set current values
             self.current['epoch'] = self.current['epoch'] + 1
             # Train epoch
@@ -222,7 +171,6 @@ class TopologicalDimensionalityReduction(Transform):
             self.current['val_topo_error'] = epoch_topo_loss
             self.current['val_error'] = epoch_loss
             # Set history values
->>>>>>> 1f8daba09f40205f00d8440490317fff96a0b439
             self.history['epoch'].append(self.current['epoch'])
             self.history['train_recon_error'].append(self.current['train_recon_error'])
             self.history['train_topo_error'].append(self.current['train_topo_error'])
@@ -234,10 +182,7 @@ class TopologicalDimensionalityReduction(Transform):
             loss_per_epoch = self.current['val_error']
             # ae_loss_per_epoch = self.current['val_recon_error']
             # topo_loss_per_epoch = self.current['val_topo_error']
-<<<<<<< HEAD
-=======
             
->>>>>>> 1f8daba09f40205f00d8440490317fff96a0b439
             # Check if loss is nan
             if np.isnan(loss_per_epoch):
                 if self.verbose:
