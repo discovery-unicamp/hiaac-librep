@@ -1,9 +1,14 @@
 import numpy as np
-from librep.estimators.simclr.torch.dataset_simclr import DatasetSIMCLR
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from librep.base.transform import Transform
+import copy
+from librep.estimators.simclr.torch.models.simclr_head import SimCLRHead
+from librep.estimators.simclr.torch.dataset_simclr import DatasetSIMCLR
+
+
 
 class NTXentLoss(nn.Module):
     def __init__(self, temperature=1.0, normalize=True, weights=1.0):
@@ -52,11 +57,11 @@ class NTXentLoss(nn.Module):
         return gradients
 
     
-class SimCLR:
-        def __init__(self, model=None, batch_size=256, transform_funcs=[], temperature=1.0, epochs=200, is_transform_function_vectorized=True, verbose=1, patience=10, min_delta=0.001,device="cuda"):
-            self.model = model.to(device)
+class SimCLR(Transform):
+        def __init__(self, input_shape,n_components=98, batch_size=256, transform_funcs=[], temperature=1.0, epochs=200, is_transform_function_vectorized=True, verbose=1, patience=10, min_delta=0.001,device="cuda"):
+            self.model=simclr_head = SimCLRHead(input_shape,n_components=n_components).to(device)           
             self.device = device
-            self.optimizer = optim.SGD(model.parameters(), lr=0.1)  # Initial learning rate is 0.1
+            self.optimizer = optim.SGD(self.model.parameters(), lr=0.1)  # Initial learning rate is 0.1
             self.temperature = temperature
             self.batch_size = batch_size
             self.transform_funcs = transform_funcs
@@ -125,13 +130,16 @@ class SimCLR:
             self.model.eval()  # Set the model to evaluation mode
             with torch.no_grad():
                 input_data = torch.tensor(input_data, dtype=torch.float32).to(self.device)
-                # Apply necessary transformations to input_data (similar to what was done in training)
-                # For example, you might need to apply the same augmentations and normalization.
-
-                # Forward pass through the model to obtain embeddings
+               
                 embeddings = self.model(input_data)
-
-                # Convert embeddings to a numpy array
                 embeddings = embeddings.cpu().numpy()
 
             return embeddings
+
+        def transform(self, X):
+            intermediate_model = copy.deepcopy(self.model.base_model)
+            test_data = torch.tensor(X, dtype=torch.float32).to(self.device)
+            embeddings = intermediate_model(test_data).cpu().detach().numpy()
+            return embeddings
+
+
