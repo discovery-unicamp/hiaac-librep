@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "librep"
-version = "0.0.1-dev"
+version = "0.0.4-dev"
 description = "HIAAC-M4 representation learning framework"
 readme = "README.md"
 authors = [{name = "Otavio Napoli", email = "otavio.napoli@gmail.com"}]
@@ -57,5 +57,5 @@ deep-learning = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/otavioon/hiaac-librep"
-"Bug Tracker" = "https://github.com/otavioon/hiaac-librep/issues"
+"Homepage" = "https://github.com/discovery-unicamp/hiaac-librep"
+"Bug Tracker" = "https://github.com/discovery-unicamp/hiaac-librep/issues"
