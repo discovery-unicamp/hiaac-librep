@@ -368,17 +368,23 @@ class ConvTAE_def(AutoencoderModel):
         # --------------------------------------------------------------
         # HIDDEN LAYERS ------------------------------------------------
         # --------------------------------------------------------------
-        # All hidden layers (only sizes)
-        hidden_layers = [(size_HL-(i-1)*down_HL, size_HL-i*down_HL) for i in range(num_HL)]
-        # First layer (last of convolutional layers)
-        hidden_layers[0] = (connection_size, size_HL)
-        # Last layer (low dimensionality)
-        hidden_layers[-1] = (size_HL-(num_HL-2)*down_HL, latent_dim)
-        # Updating encoder layers
-        for pair in hidden_layers:
-            layer = nn.Linear(pair[0], pair[1])
+        # Create dimensions with the sizes of the layers as intermediate valus between connection and latent
+        dimensions = np.linspace(connection_size, latent_dim, num_HL+1).round().astype(int)
+        for index, dim in enumerate(dimensions[:-1]):
+            layer = nn.Linear(dim, dimensions[index+1])
             encoder_list_layers.append(layer)
             encoder_list_layers.append(nn.ReLU())
+        # All hidden layers (only sizes)
+        # hidden_layers = [(size_HL-(i-1)*down_HL, size_HL-i*down_HL) for i in range(num_HL)]
+        # First layer (last of convolutional layers)
+        # hidden_layers[0] = (connection_size, size_HL)
+        # Last layer (low dimensionality)
+        # hidden_layers[-1] = (size_HL-(num_HL-2)*down_HL, latent_dim)
+        # Updating encoder layers
+        # for pair in hidden_layers:
+        #     layer = nn.Linear(pair[0], pair[1])
+        #     encoder_list_layers.append(layer)
+        #     encoder_list_layers.append(nn.ReLU())
         # Delete the last ReLU()
         encoder_list_layers.pop()
         # Build the encoder
@@ -389,14 +395,20 @@ class ConvTAE_def(AutoencoderModel):
         # HIDDEN LAYERS ------------------------------------------------
         # --------------------------------------------------------------
         # All hidden layers (only sizes)
-        hidden_layers = [(size_HL-(num_HL-i)*down_HL, size_HL-(num_HL-i+1)*down_HL) for i in range(num_HL)]
+        # hidden_layers = [(size_HL-(num_HL-i)*down_HL, size_HL-(num_HL-i+1)*down_HL) for i in range(num_HL)]
         # First layer (low dimensionality)
-        hidden_layers[0] = (latent_dim, size_HL-(num_HL-2)*down_HL)
+        # hidden_layers[0] = (latent_dim, size_HL-(num_HL-2)*down_HL)
         # Last layer (first of convolutional layers)
-        hidden_layers[-1] = (size_HL, connection_size)
+        # hidden_layers[-1] = (size_HL, connection_size)
         # Updating decoder layers
-        for pair in hidden_layers:
-            layer = nn.Linear(pair[0], pair[1])
+        # for pair in hidden_layers:
+        #     layer = nn.Linear(pair[0], pair[1])
+        #     decoder_list_layers.append(layer)
+        #     decoder_list_layers.append(nn.ReLU())
+        # Reversing dimensions
+        dimensions = dimensions[::-1]
+        for index, dim in enumerate(dimensions[:-1]):
+            layer = nn.Linear(dim, dimensions[index+1])
             decoder_list_layers.append(layer)
             decoder_list_layers.append(nn.ReLU())
         # Adding the "View" view before the last ReLU()
