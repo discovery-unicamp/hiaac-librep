@@ -426,8 +426,8 @@ class ConvTAE_def(AutoencoderModel):
                 decoder_list_layers.append(nn.ReLU())
         # Build the decoder
         self.decoder = nn.Sequential(*decoder_list_layers)
-        # print(self.encoder, '\n')
-        # print(self.decoder)
+        print(self.encoder, '\n')
+        print(self.decoder)
         self.reconst_error = nn.MSELoss()
         
     def encode(self, x):
