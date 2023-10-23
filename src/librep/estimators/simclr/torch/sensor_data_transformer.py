@@ -5,7 +5,23 @@ import pywt
 
 class SensorDataTransformer:
     def __init__(self, random_seed=None):
-        self.transform_funcs_names = ['noise_vectorized', 'scaling_vectorized', 'rotation_vectorized', 'negate_vectorized', 'time_flip_vectorized', 'channel_shuffle_vectorized', 'time_segment_permutation',  'time_shift', 'amplify_attenuate', 'add_random_noise',   'random_phase_shift', 'spectral_distortion','phase_modulation']
+        self.transform_func_mapping = {
+            0: 'noise_vectorized',
+            1: 'scaling_vectorized',
+            2: 'rotation_vectorized',
+            3: 'negate_vectorized',
+            4: 'time_flip_vectorized',
+            5: 'channel_shuffle_vectorized',
+            6: 'time_shift',
+            7: 'amplify_attenuate',
+            8: 'add_random_noise',
+            9: 'random_phase_shift',
+            10: 'spectral_distortion',
+            11: 'phase_modulation'
+            #6: 'time_segment_permutation',
+
+        }
+
         self.random_seed = random_seed
         
     
@@ -23,13 +39,16 @@ class SensorDataTransformer:
             return X
         return combined_transform_func
         
-    def get_transform_function(self, transform_names):
+    def get_transform_function(self, transform_indices):
         transform_funcs = []
-        for name in transform_names:
-            if name not in self.transform_funcs_names:
-                raise ValueError(f"Invalid transform function name: {name}")
-            transform_funcs.append(getattr(self, f"{name}_transform"))
+        for index in transform_indices:
+            if index not in self.transform_func_mapping:
+                raise ValueError(f"Invalid transform function index: {index}")
+            long_name = self.transform_func_mapping[index]
+            transform_func = getattr(self, f"{long_name}_transform")
+            transform_funcs.append(transform_func)
         return self.generate_composite_transform_function_simple(transform_funcs)
+
         
 
     def noise_vectorized_transform(self,X, sigma=0.05):

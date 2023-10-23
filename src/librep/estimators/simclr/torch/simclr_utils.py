@@ -3,16 +3,19 @@ import sklearn.metrics
 from sklearn.model_selection import train_test_split
 import pandas as pd
 
-def resize_data(data,input_shape):
-        submatrix_rows = input_shape[0]
-        submatrix_cols = input_shape[1]
-        result_matrices = []
-
-        for row in data:
-            row_matrices = np.split(row, len(row) // submatrix_cols)
-            result_matrices.append(row_matrices)
-        final_array = np.array(result_matrices)
-        return final_array
+def resize_data(data,input_shape):        
+        if(len(data.shape)==2): 
+            submatrix_rows = input_shape[0]
+            submatrix_cols = input_shape[1]
+            result_matrices = []
+    
+            for row in data:
+                row_matrices = np.split(row, len(row) // submatrix_cols)
+                result_matrices.append(row_matrices)
+            final_array = np.array(result_matrices)
+            return final_array
+        else:
+            return data
     
 def get_resize_data(X,X_val,y,y_val,input_shape):
     if X_val is None:
@@ -26,15 +29,39 @@ def get_resize_data(X,X_val,y,y_val,input_shape):
 
 def transform_combinations(start=1,end=4):
     from itertools import combinations
-    transform_funcs_names = ['noise_vectorized', 'scaling_vectorized', 
-                             'rotation_vectorized', 'negate_vectorized', 'time_flip_vectorized', 
-                             'channel_shuffle_vectorized', 'time_segment_permutation',  
-                             'time_shift', 'amplify_attenuate',
-                             'add_random_noise',   'random_phase_shift', 
-                             'spectral_distortion','phase_modulation']
+    transform_funcs_names = ['noise_vectorized',
+                             'scaling_vectorized', 
+                             'rotation_vectorized', 
+                             'negate_vectorized', 
+                             'time_flip_vectorized', 
+                             'channel_shuffle_vectorized', 
+                             #'time_segment_permutation',  
+                             'time_shift',
+                             'amplify_attenuate',
+                             'add_random_noise',
+                             'random_phase_shift', 
+                             'spectral_distortion',
+                             'phase_modulation']
+    short_transform_names = [
+    'noise',
+    'scaling',
+    'rotation',
+    'negate',
+    'time_flip',
+    'channel_shuffle',
+    'segment_permutation',
+    'time_shift',
+    'amplify',
+    'add_noise',
+    'phase_shift',
+    'distortion',
+    'modulation'
+]
+    transform_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
     transformations=[]
     for n_transf in range(start,end):
-            transformations_ = [list(comb) for comb in combinations(transform_funcs_names, n_transf)]
+            transformations_ = [list(comb) for comb in combinations(transform_indices, n_transf)]
             transformations.extend(transformations_) 
     return transformations
 

@@ -47,7 +47,6 @@ class NTXentLoss(nn.Module):
         targets = torch.cat([labels, labels], dim=0)
         loss = entropy_function(logits, targets)
         weighted_loss = (loss * self.weights).mean()
-
         return weighted_loss
 
     def calculate_gradients(self, loss, model):
@@ -56,79 +55,85 @@ class NTXentLoss(nn.Module):
 
     
 class SimCLR(Transform):
-        def __init__(self, input_shape,n_components=98, batch_size=256, transform_funcs=[], temperature=1.0, epochs=200, is_transform_function_vectorized=True, verbose=1, patience=10, min_delta=0.001,device='cuda',save_simclr_model=True):
+        def __init__(self, dataset,input_shape,n_components=98, batch_size=256, transform_funcs=[], temperature=1.0, epochs=200,  verbose=1, patience=10, min_delta=0.001,device='cuda',save_simclr_model=True):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             
-            self.model=simclr_head = SimCLRHead(input_shape,n_components=n_components).to(self.device)           
+            self.model=SimCLRHead(input_shape,n_components=n_components).to(self.device)           
             
             self.optimizer = optim.SGD(self.model.parameters(), lr=0.1)  # Initial learning rate is 0.1
-            self.temperature = temperature
+            self.temperature = round(temperature, 2)
             self.batch_size = batch_size
             self.transform_funcs = transform_funcs
             self.epochs = epochs
-            self.is_transform_function_vectorized = is_transform_function_vectorized
+            self.is_transform_function_vectorized = True
             self.verbose = verbose
             self.epoch_wise_loss = []
             self.patience = patience
-            self.min_delta = min_delta
+            self.min_delta = round(min_delta, 3)
             self.best_loss = float('inf')
             self.num_epochs_without_improvement = 0
             self.input_shape=input_shape
             self.save_simclr_model=save_simclr_model
-            self.simclr_model_save_path =str(input_shape)+str(n_components)+str(batch_size)+ str(transform_funcs)+str(temperature)+str(epochs)+ str(is_transform_function_vectorized)+ str(patience)+ str(min_delta)+"_simclr.pth"
+            self.simclr_model_save_path =dataset+"_"+str(input_shape)+"_"+           str(n_components)+"_"+str(batch_size)+"_"+str(transform_funcs)+"_"+str(self.temperature)+"_"+ str(epochs)+"_"+ str(patience)+"_"+ str(self.min_delta)+"_simclr.pth"
+            self.working_directory="../../models/"
+            self.simclr_model_save_path = f"{self.working_directory}{self.simclr_model_save_path}"
 
         def fit(self,X: ArrayLike, y = None, X_val=None, y_val = None):
             X=s_utils.resize_data(X, self.input_shape)
             dataset=X
-            nt_xent_loss = NTXentLoss(temperature=self.temperature, normalize=True, weights=1.0)
 
-            for epoch in range(self.epochs):
-                step_wise_loss = []
-                ds = DatasetSIMCLR(dataset, self.transform_funcs, self.device)
-                batched_dataset = ds.get_transformed_items(self.batch_size, self.is_transform_function_vectorized)
-
-                for transforms in batched_dataset:
-                    transform_1 = transforms[0]
-                    transform_2 = transforms[1]
-                    self.optimizer.zero_grad()
-                    loss, gradients = nt_xent_loss(transform_1, transform_2, self.model)
-
-                    self.optimizer.zero_grad()
-                    for param, grad in zip(self.model.parameters(), gradients):
-                        param.grad = grad
-                    self.optimizer.step()
-
-                    step_wise_loss.append(loss.item())
-
-                epoch_loss = np.mean(step_wise_loss)
-                self.epoch_wise_loss.append(epoch_loss)
-
-                if self.verbose > 0:
-                    print("epoch: {} loss: {:.3f}".format(epoch + 1, epoch_loss))
-
-                if epoch_loss < self.best_loss - self.min_delta:
-                    self.best_loss = epoch_loss
-                    self.num_epochs_without_improvement = 0
-                else:
-                    self.num_epochs_without_improvement += 1
-
-                if self.num_epochs_without_improvement >= self.patience:
+            if os.path.exists(self.simclr_model_save_path):
+                print("exist model")
+                self.model.load_state_dict(torch.load(self.simclr_model_save_path))
+                self.model.eval() 
+                return self.model,[]
+            else:                
+                nt_xent_loss = NTXentLoss(temperature=self.temperature, normalize=True, weights=1.0)    
+                for epoch in range(self.epochs):
+                    step_wise_loss = []
+                    ds = DatasetSIMCLR(dataset, self.transform_funcs, self.device)
+                    batched_dataset = ds.get_transformed_items(self.batch_size, self.is_transform_function_vectorized)
+    
+                    for transforms in batched_dataset:
+                        transform_1 = transforms[0]
+                        transform_2 = transforms[1]
+                        self.optimizer.zero_grad()
+                        loss, gradients = nt_xent_loss(transform_1, transform_2, self.model)
+    
+                        self.optimizer.zero_grad()
+                        for param, grad in zip(self.model.parameters(), gradients):
+                            param.grad = grad
+                        self.optimizer.step()
+    
+                        step_wise_loss.append(loss.item())
+    
+                    epoch_loss = np.mean(step_wise_loss)
+                    self.epoch_wise_loss.append(epoch_loss)
+    
                     if self.verbose > 0:
-                        print(f'Early stopping after {epoch + 1} epochs with no improvement.')
-                    break
-
-            if (self.save_simclr_model):
-                
-                working_directory="../../models/"
-                try:
-                    os.makedirs(working_directory)
-                except:
-                    exist=1
+                        print("epoch: {} loss: {:.3f}".format(epoch + 1, epoch_loss))
+    
+                    if epoch_loss < self.best_loss - self.min_delta:
+                        self.best_loss = epoch_loss
+                        self.num_epochs_without_improvement = 0
+                    else:
+                        self.num_epochs_without_improvement += 1
+    
+                    if self.num_epochs_without_improvement >= self.patience:
+                        if self.verbose > 0:
+                            print(f'Early stopping after {epoch + 1} epochs with no improvement.')
+                        break
+    
+                if (self.save_simclr_model):
+                    try:
+                        os.makedirs(self.working_directory)
+                    except:
+                        exist=1
+                        
                     
-                simclr_model_save_path = f"{working_directory}{self.simclr_model_save_path}"
-                torch.save(self.model.state_dict(), simclr_model_save_path)
-
-            return self.model, self.epoch_wise_loss
+                    torch.save(self.model.state_dict(), self.simclr_model_save_path)
+    
+                return self.model, self.epoch_wise_loss
 
 
         def predict(self, input_data):

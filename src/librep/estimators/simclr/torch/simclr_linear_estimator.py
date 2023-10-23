@@ -5,24 +5,29 @@ from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
 import os
 from librep.estimators.simclr.torch.models.linear_model_intermediate import LinearModel_Intermediate
-#from librep.estimators.simclr.torch.models.simclr_head import SimCLRHead
 from librep.transforms.simclr import SimCLR
 from librep.base.estimator import Estimator
 import librep.estimators.simclr.torch.simclr_utils as s_utils
 
-
 class Simclr_Linear_Estimator(Estimator):
-    def __init__(self,input_shape,
+    def __init__(self,
+                 dataset,
+                 input_shape,
                  n_components,   
                  batch_size_head,
                  transform_funcs,
                  temperature_head,
                  epochs_head,
+                 patience=10,
+                 min_delta=0.001,
+                 device='cuda',
+                 save_simclr_model=True,
                  save_model=False,
-                 verbose=0,
+                 verbose=0,                 
                  total_epochs=50,
                  batch_size=32,
-                 lr=0.001):   
+                 lr=0.001,
+                ):   
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.batch_size=batch_size
         self.lr=lr
@@ -31,22 +36,22 @@ class Simclr_Linear_Estimator(Estimator):
         self.input_shape=input_shape
         self.sequence_length=self.input_shape[0]
         self.input_size=self.input_shape[1]
+        temperature_head=round(temperature_head, 2)
+        min_delta=round(temperature_head, 3)
         self.simclr = SimCLR(input_shape=input_shape,
                              n_components=n_components,
                              batch_size=batch_size_head, 
                              transform_funcs=transform_funcs,
                              temperature=temperature_head,
                              epochs=epochs_head,
-                             is_transform_function_vectorized=True,
-                             verbose=verbose,device=self.device)
-            
-            
-
-        
+                             patience=patience,
+                             min_delta=min_delta,
+                             save_simclr_model=save_simclr_model,
+                             verbose=verbose,device=self.device,dataset=dataset)
+     
     def fit(self,X,y, X_val = None, y_val = None):
         X,X_val,y,y_val=s_utils.get_resize_data(X,X_val,y,y_val,self.input_shape)
-        print(X.shape,self.input_shape)
-        trained_simclr_model,epoch_wise_loss = self.simclr.fit(X)
+        trained_simclr_model,epoch_wise_loss = self.simclr.fit(X)        
         y_train = torch.Tensor(np.array(y))
         y_val = torch.Tensor(np.array(y_val))
         num_classes = len(torch.unique(y_train))                        
@@ -56,16 +61,11 @@ class Simclr_Linear_Estimator(Estimator):
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)       
                   
-        #evaluation_model = LinearModel_Full(trained_simclr_model, num_classes, ).to(self.device)
         evaluation_model = LinearModel_Intermediate(trained_simclr_model, num_classes, ).to(self.device)
         
         self.model=evaluation_model
-        
-
-        # Define loss and optimizer
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(evaluation_model.parameters(), self.lr)
-
         best_accuracy = 0.0
         best_model_path = "best_linear_evaluation_model_est.pth"
 
@@ -99,7 +99,6 @@ class Simclr_Linear_Estimator(Estimator):
             if(self.verbose):
                 print(f"Val Accuracy: {val_accuracy:.4f}")
 
-            # Save the model if it's the best model so far
             if val_accuracy > best_accuracy:
                 best_accuracy = val_accuracy
                 self.model=evaluation_model

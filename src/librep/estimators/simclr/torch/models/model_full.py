@@ -1,8 +1,8 @@
 import torch.nn as nn
        
-class LinearModel_Full(nn.Module):
+class Model_Full(nn.Module):
     def __init__(self, simclr_head, num_classes):
-        super(LinearModel_Full, self).__init__()
+        super(Model_Full, self).__init__()
         self.simclr_head = simclr_head
         self.linear = nn.Linear(simclr_head.hidden_3, num_classes)
 
