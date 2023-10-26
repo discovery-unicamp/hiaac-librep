@@ -1,29 +1,18 @@
+from librep.base.transform import Transform
 import numpy as np
 from scipy import signal
 
-from librep.base.transform import Transform
-from librep.config.type_definitions import ArrayLike
-
 
 class Spectrogram(Transform):
-
-    def __init__(self,
-                 fs: float = 100,
-                 segment_size: int = 50,
-                 overlap: int = 30,
-                 reshape: bool = True):
+    def __init__(self, fs: int = 20, nperseg=20, nfft=None, window=("tukey", 0.25)):
         self.fs = fs
-        self.segment_size = segment_size
-        self.overlap = overlap
-        self.reshape = True
+        self.nperseg = nperseg
+        self.nfft = nfft
+        self.window = window
 
-    # TODO
-    def transform(self, X: ArrayLike):
-        f, t, Sxx = signal.spectrogram(X,
-                                       fs=self.fs,
-                                       nperseg=self.segment_size,
-                                       noverlap=self.overlap)
-        if self.reshape:
-            return Sxx.ravel()
-        else:
-            return Sxx
+    def transform(self, X):
+        datas = []
+        for data in X:
+            _, _, Sxx = signal.spectrogram(data, fs=self.fs, nperseg=self.nperseg, nfft=self.nfft, window=self.window)
+            datas.append(Sxx.ravel())
+        return np.array(datas)
