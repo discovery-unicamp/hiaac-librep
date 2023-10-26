@@ -4,6 +4,7 @@ from sklearn.metrics import (
     classification_report,
     accuracy_score,
     f1_score,
+    balanced_accuracy_score,
     confusion_matrix,
     ConfusionMatrixDisplay
 )
@@ -18,6 +19,7 @@ class ClassificationReport(SupervisedEvaluator):
         self,
         use_accuracy: bool = True,
         use_f1_score: bool = True,
+        use_balanced_accuracy: bool = False,
         use_confusion_matrix: bool = True,
         use_classification_report: bool = False,
         plot_confusion_matrix: bool = True,
@@ -29,6 +31,7 @@ class ClassificationReport(SupervisedEvaluator):
     ):
         self.use_accuracy = use_accuracy
         self.use_f1_score = use_f1_score
+        self.use_balanced_accuracy = use_balanced_accuracy
         self.use_confusion_matrix = use_confusion_matrix
         self.use_classification_report = use_classification_report
         self.plot_confusion_matrix = plot_confusion_matrix
@@ -59,6 +62,10 @@ class ClassificationReport(SupervisedEvaluator):
 
             res = f1_score(y_true, y_pred, average="macro")
             result["f1 score (macro)"] = float(res)
+        
+        if self.use_balanced_accuracy:
+            res = balanced_accuracy_score(y_true, y_pred)
+            result["balanced accuracy"] = float(res)
 
         if self.use_confusion_matrix:
             res = confusion_matrix(y_true, y_pred)
