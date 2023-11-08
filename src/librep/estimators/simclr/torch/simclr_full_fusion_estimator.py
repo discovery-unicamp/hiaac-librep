@@ -9,7 +9,7 @@ from librep.transforms.simclr import SimCLR
 from librep.base.estimator import Estimator
 import librep.estimators.simclr.torch.simclr_utils as s_utils
 
-class Simclr_Full_Estimator(Estimator):
+class Simclr_Full__FusionEstimator(Estimator):
     def __init__(self,
                  dataset,
                  input_shape,
@@ -38,10 +38,22 @@ class Simclr_Full_Estimator(Estimator):
         self.input_size=self.input_shape[1]
         temperature_head=round(temperature_head, 2)
         min_delta=round(temperature_head, 3)
-        self.simclr = SimCLR(input_shape=input_shape,
+        self.simclr1 = SimCLR(input_shape=input_shape,
                              n_components=n_components,
                              batch_size=batch_size_head, 
-                             transform_funcs=transform_funcs,
+                             transform_funcs=transform_funcs[0],
+                             temperature=temperature_head,
+                             epochs=epochs_head,
+                             patience=patience,
+                             min_delta=min_delta,
+                             save_reducer=save_reducer,
+                             
+                             verbose=verbose,device=self.device,dataset=dataset)
+        
+        self.simclr2 = SimCLR(input_shape=input_shape,
+                             n_components=n_components,
+                             batch_size=batch_size_head, 
+                             transform_funcs=transform_funcs[1],
                              temperature=temperature_head,
                              epochs=epochs_head,
                              patience=patience,
@@ -52,7 +64,10 @@ class Simclr_Full_Estimator(Estimator):
      
     def fit(self,X,y, X_val = None, y_val = None):
         X,X_val,y,y_val=s_utils.get_resize_data(X,X_val,y,y_val,self.input_shape)
-        trained_simclr_model,epoch_wise_loss = self.simclr.fit(X)        
+        trained_simclr_model1,epoch_wise_loss1 = self.simclr1.fit(X) 
+        trained_simclr_model2,epoch_wise_loss2 = self.simclr2.fit(X) 
+
+        
         y_train = torch.Tensor(np.array(y))
         y_val = torch.Tensor(np.array(y_val))
         num_classes = len(torch.unique(y_train))                        
@@ -62,7 +77,12 @@ class Simclr_Full_Estimator(Estimator):
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)       
                   
-        evaluation_model = Model_Full(trained_simclr_model, num_classes, ).to(self.device)
+        evaluation_model = Model_Full(trained_simclr_model1, num_classes, ).to(self.device)
+        evaluation_model.load_state_dict(trained_simclr_model2.state_dict(), strict=False)
+
+# Carregue os pesos do segundo modelo
+        evaluation_model.load_state_dict(trained_simclr_model1.state_dict(), strict=False)
+
         
         self.model=evaluation_model
         criterion = nn.CrossEntropyLoss()

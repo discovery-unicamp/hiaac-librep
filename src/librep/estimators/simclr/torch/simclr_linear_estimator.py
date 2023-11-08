@@ -18,17 +18,18 @@ class Simclr_Linear_Estimator(Estimator):
                  transform_funcs,
                  temperature_head,
                  epochs_head,
-                 patience=10,
-                 min_delta=0.001,
-                 device='cuda',
-                 save_simclr_model=True,
-                 save_model=False,
-                 verbose=0,                 
-                 total_epochs=50,
-                 batch_size=32,
-                 lr=0.001,
+                 patience,
+                 min_delta,
+                 device,
+                 save_reducer,
+                 save_model,
+                 verbose,                 
+                 total_epochs,
+                 batch_size,
+                 lr,
                 ):   
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(verbose, "verbose")
         self.batch_size=batch_size
         self.lr=lr
         self.total_epochs=total_epochs
@@ -46,7 +47,8 @@ class Simclr_Linear_Estimator(Estimator):
                              epochs=epochs_head,
                              patience=patience,
                              min_delta=min_delta,
-                             save_simclr_model=save_simclr_model,
+                             save_reducer=save_reducer,
+                             
                              verbose=verbose,device=self.device,dataset=dataset)
      
     def fit(self,X,y, X_val = None, y_val = None):

@@ -55,8 +55,10 @@ class NTXentLoss(nn.Module):
 
     
 class SimCLR(Transform):
-        def __init__(self, dataset,input_shape,n_components=98, batch_size=256, transform_funcs=[], temperature=1.0, epochs=200,  verbose=1, patience=10, min_delta=0.001,device='cuda',save_simclr_model=True):
+        def __init__(self, dataset,input_shape,n_components
+                     , batch_size, transform_funcs, temperature, epochs,  verbose, patience, min_delta,device,save_reducer):
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            print(self.device)
             
             self.model=SimCLRHead(input_shape,n_components=n_components).to(self.device)           
             
@@ -73,7 +75,7 @@ class SimCLR(Transform):
             self.best_loss = float('inf')
             self.num_epochs_without_improvement = 0
             self.input_shape=input_shape
-            self.save_simclr_model=save_simclr_model
+            self.save_simclr_model=save_reducer
             self.simclr_model_save_path =dataset+"_"+str(input_shape)+"_"+           str(n_components)+"_"+str(batch_size)+"_"+str(transform_funcs)+"_"+str(self.temperature)+"_"+ str(epochs)+"_"+ str(patience)+"_"+ str(self.min_delta)+"_simclr.pth"
             self.working_directory="../../models/"
             self.simclr_model_save_path = f"{self.working_directory}{self.simclr_model_save_path}"
