@@ -3,6 +3,7 @@ from typing import List, Tuple, Dict, Any
 
 
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -26,7 +27,10 @@ from tqdm import tqdm
 # Function to load the dataset
 ############################################################################################################
 def load_dataset(
-    dataset_name: str, reduce_on: str, normalization: str = None, path: Path = Path("../results/execution/output_files/reduced_data")
+    dataset_name: str,
+    reduce_on: str,
+    normalization: str = None,
+    path: Path = Path("../results/execution/output_files/reduced_data"),
 ) -> Tuple[PandasMultiModalDataset, PandasMultiModalDataset]:
     """This function loads the dataset from the path. In particular, it loads the train and test files from the path:
     results/execution/output_files/reduced_data/{dataset_name}-{reduce_on}.
@@ -167,6 +171,25 @@ def train_knn(train: PandasMultiModalDataset) -> KNeighborsClassifier:
         The trained KNN classifier
     """
     model = KNeighborsClassifier(n_neighbors=5)
+    DatasetFitter(model, use_y=True)(train)
+
+    return model
+
+
+def train_dt(train: PandasMultiModalDataset) -> DecisionTreeClassifier:
+    """This function trains a Decision Tree classifier on the train dataset.
+
+    Parameters
+    ----------
+    train: Dataset
+        The train dataset
+
+    Returns
+    -------
+    model: DecisionTreeClassifier
+        The trained Decision Tree classifier
+    """
+    model = DecisionTreeClassifier(random_state=42)
     DatasetFitter(model, use_y=True)(train)
 
     return model
