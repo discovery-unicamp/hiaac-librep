@@ -117,6 +117,7 @@ def normalize_dataset(
 # Random Forest
 # SVM
 # KNN
+# Decision Tree
 ############################################################################################################
 def train_rf(train: PandasMultiModalDataset) -> RandomForestClassifier:
     """This function trains a Random Forest classifier on the train dataset.
@@ -351,7 +352,8 @@ def calc_lime_values(
 
         lime_value = {
             "True class": y,
-            "Predicted class by lime:": list(exp.as_map().keys())[0],
+            "LIME prediction": list(exp.as_map().keys())[0],
+            "Model prediction": model.predict([sample])[0],
             "Lime values": exp.as_map(),
             "Explainer": exp,
         }
@@ -372,6 +374,7 @@ def lime_values_per_class(
     activities: List[int],
     standartized_codes: Dict[int, str],
     num_features: int = 24,
+    remove_misclassified: bool = True,
 ) -> pd.DataFrame:
     """This function calculates the lime values for each feature, for each activity. For each activity,
     the lime values from a subset are the absolute average of the feature importances of all samples in the subset.
@@ -400,39 +403,42 @@ def lime_values_per_class(
         The dataframe containing the feature importance for each feature for each activity by lime
     """
 
-    columns = [f"feature {i}" for i in range(num_features)] + [
-        "Classifier",
-        "Dataset",
-        "reduce on",
-        "activity",
+    dfs = {activity: [] for activity in activities}
+
+    fis = {activity: [] for activity in activities}
+    for j, lime_value in enumerate(lime_values):
+        # Calculate the feature importance for the sample
+        activity = lime_value["True class"]
+        lime_predict = lime_value["LIME prediction"]
+        sample = lime_value["Lime values"][lime_predict]
+        sample = sorted(sample)
+        sample = np.array(sample)
+        fi = np.abs(sample[:, 1])
+        model_predict = lime_value["Model prediction"]
+        if remove_misclassified:
+            fis[activity].append(fi)
+        else:
+            # Check if the model predicted correctly the sample
+            if model_predict == activity:
+                fis[activity].append(fi)
+
+    # Let's calculate the average of the feature importance for each activity
+    columns = ["Classifier", "Dataset", "reduce on", "activity"] + [
+        f"feature_{i}" for i in range(num_features)
     ]
-    dfs = []
-
     for activity in activities:
-        list = []
-        df = {column: None for column in columns}
-        for j, lime_value in enumerate(lime_values):
-            if lime_value["True class"] == activity:
-                lime_predict = lime_value["Predicted class by lime:"]
-                sample = lime_value["Lime values"][lime_predict]
-                sample = sorted(sample)
-                sample = np.array(sample)
-                sample = sample[:, 1]
-                sample = np.abs(sample)
-                list.append(sample)
+        fi_class = np.array(fi_class)
+        fi_class = np.mean(fi_class, axis=0)
+        fi_class = fi_class.tolist()
+        data = [model_name, dataset, reduce, standartized_codes[activity]] + fi_class
+        df = pd.DataFrame([data], columns=columns)
+        dfs[activity].append(df)
 
-        list = np.array(list)
-        list = np.mean(list, axis=0)
-        list = np.array(list)
+    columns = dfs[activity][0].columns
+    # The dataframe containing the global feature importance for each class of the dataset
+    df = pd.concat(dfs.values(), ignore_index=True, columns=columns)
 
-        df["Classifier"] = model_name
-        df["Dataset"] = dataset
-        df["reduce on"] = reduce
-        df["activity"] = standartized_codes[activity]
-        for i, value in enumerate(list[:num_features]):
-            df[f"feature {i}"] = value
-        dfs.append(df)
-    return pd.DataFrame(dfs).reset_index(drop=True)
+    return df
 
 
 def lime_values_per_feature(
@@ -540,6 +546,8 @@ def calc_oracle_values(
             else train_svm(train)
             if classifier == "SVM"
             else train_knn(train)
+            if classifier == "KNN"
+            else train_dt(train)
         )
         accuracy = model.score(test.X, test.y)
         accuracies.append(accuracy)
