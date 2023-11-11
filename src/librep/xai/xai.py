@@ -403,7 +403,7 @@ def lime_values_per_class(
         The dataframe containing the feature importance for each feature for each activity by lime
     """
 
-    dfs = {activity: [] for activity in activities}
+    dfs = {activity: None for activity in activities}
 
     fis = {activity: [] for activity in activities}
     for j, lime_value in enumerate(lime_values):
@@ -432,7 +432,7 @@ def lime_values_per_class(
         fi_class = fi_class.tolist()
         data = [model_name, dataset, reduce, standartized_codes[activity]] + fi_class
         df = pd.DataFrame([data], columns=columns)
-        dfs[activity].append(df)
+        dfs[activity] = df
 
     # The dataframe containing the global feature importance for each class of the dataset
     df = pd.concat([sub_df for sub_df in dfs.values()])
