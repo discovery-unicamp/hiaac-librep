@@ -30,7 +30,7 @@ def load_dataset(
     dataset_name: str,
     reduce_on: str,
     normalization: str = None,
-    path: Path = Path("../results/execution/output_files/reduced_data"),
+    path: Path = Path("../results/execution/transformed_data"),
 ) -> Tuple[PandasMultiModalDataset, PandasMultiModalDataset]:
     """This function loads the dataset from the path. In particular, it loads the train and test files from the path:
     results/execution/output_files/reduced_data/{dataset_name}-{reduce_on}.
@@ -57,10 +57,10 @@ def load_dataset(
     path = path / f"{dataset_name}-{reduce_on}"
 
     # Let's read files from the directory path
-    with open(path / "train", "rb") as f:
+    with open(path / "train.pkl", "rb") as f:
         train = pickle.load(f)
 
-    with open(path / "test", "rb") as f:
+    with open(path / "test.pkl", "rb") as f:
         test = pickle.load(f)
 
     # Let's normalize the dataset
