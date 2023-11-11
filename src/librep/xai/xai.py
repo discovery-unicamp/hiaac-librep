@@ -427,7 +427,7 @@ def lime_values_per_class(
         f"feature_{i}" for i in range(num_features)
     ]
     for activity in activities:
-        fi_class = np.array(fi_class)
+        fi_class = np.array(fis[activity])
         fi_class = np.mean(fi_class, axis=0)
         fi_class = fi_class.tolist()
         data = [model_name, dataset, reduce, standartized_codes[activity]] + fi_class
