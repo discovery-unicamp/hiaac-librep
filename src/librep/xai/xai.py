@@ -434,9 +434,8 @@ def lime_values_per_class(
         df = pd.DataFrame([data], columns=columns)
         dfs[activity].append(df)
 
-    columns = dfs[activity][0].columns
     # The dataframe containing the global feature importance for each class of the dataset
-    df = pd.concat(dfs.values(), ignore_index=True, columns=columns)
+    df = pd.concat([sub_df for sub_df in dfs.values()])
 
     return df
 
