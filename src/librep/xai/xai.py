@@ -396,6 +396,8 @@ def lime_values_per_class(
         The dictionary containing the mapping between the activity codes and the activity names
     num_features: int
         The number of features
+    misclassified: bool
+        If True, the samples misclassified by the model are removed when calculating the feature importance with lime
 
     Returns
     -------
@@ -423,15 +425,15 @@ def lime_values_per_class(
                 fis[activity].append(fi)
 
     # Let's calculate the average of the feature importance for each activity
-    columns = ["Classifier", "Dataset", "reduce on", "activity"] + [
-        f"feature_{i}" for i in range(num_features)
-    ]
+    columns = [f"feature {i}" for i in range(num_features)]
     for activity in activities:
         fi_class = np.array(fis[activity])
         fi_class = np.mean(fi_class, axis=0)
-        fi_class = fi_class.tolist()
-        data = [model_name, dataset, reduce, standartized_codes[activity]] + fi_class
-        df = pd.DataFrame([data], columns=columns)
+        df = pd.DataFrame([fi_class], columns=columns)
+        df["Classifier"] = model_name
+        df["Dataset"] = dataset
+        df["reduce on"] = reduce
+        df["activity"] = standartized_codes[activity]
         dfs[activity] = df
 
     # The dataframe containing the global feature importance for each class of the dataset
@@ -448,6 +450,7 @@ def lime_values_per_feature(
     activities: List[int],
     standartized_codes: Dict[int, str],
     num_features: int = 24,
+    remove_misclassified: bool = True,
 ) -> pd.DataFrame:
     """This function calculates the lime values for each feature, for each activity. For each activity,
     the lime values from a subset are the absolute average of the feature importances of all samples in the subset.
@@ -469,6 +472,8 @@ def lime_values_per_feature(
         The dictionary containing the mapping between the activity codes and the activity names
     num_features: int
         The number of features
+    remove_misclassified: bool
+        If True, the samples misclassified by the model are removed when calculating the feature importance with lime
 
     Returns
     -------
@@ -484,14 +489,22 @@ def lime_values_per_feature(
         activities,
         standartized_codes,
         num_features,
+        remove_misclassified,
     )
-    # Let's remove the columns that are not features
-    df = df.drop(columns=["Classifier", "Dataset", "reduce on", "activity"])
 
-    # Let's sum all lines
-    df = df.sum(axis=0).to_frame().T
+    dfs = []
+    df.drop(columns=["activity"], inplace=True)
+    for (classifier, dataset, reduce), sub_df in df.groupby(
+        ["Classifier", "Dataset", "reduce on"]
+    ):
+        # Let's sum all lines
+        sub_df = sub_df.sum(axis=0).to_frame().T
+        sub_df["Classifier"] = classifier
+        sub_df["Dataset"] = dataset
+        sub_df["reduce on"] = reduce
+        dfs.append(sub_df)
 
-    return df.reset_index(drop=True)
+    return pd.concat(dfs).reset_index(drop=True)
 
 
 ############################################################################################################
@@ -523,6 +536,13 @@ def calc_oracle_values(
         The number of latent dimensions, that is, the number of features
     columns_to_remove: List[int]
         The list of columns to remove from the dataset, if needed
+    normalization: str
+        The name of the normalization technique to apply to the dataset
+        If None, no normalization is applied
+        If "MinMaxScaler", MinMaxScaler is applied
+        If "StandardScaler", StandardScaler is applied
+    data_path: str
+        The path where the dataset is stored
 
     Returns
     -------
