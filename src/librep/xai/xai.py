@@ -30,7 +30,7 @@ def load_dataset(
     dataset_name: str,
     reduce_on: str,
     normalization: str = None,
-    path: Path = Path("../results/execution/transformed_data"),
+    path: Path = Path("../reducer_experiments/results/execution/transformed_data/"),
 ) -> Tuple[PandasMultiModalDataset, PandasMultiModalDataset]:
     """This function loads the dataset from the path. In particular, it loads the train and test files from the path:
     results/execution/output_files/reduced_data/{dataset_name}-{reduce_on}.
