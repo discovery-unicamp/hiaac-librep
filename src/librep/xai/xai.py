@@ -30,7 +30,7 @@ def load_dataset(
     dataset_name: str,
     reduce_on: str,
     normalization: str = None,
-    path: Path = Path("../reducer_experiments/results/execution/transformed_data/"),
+    path: Path = Path("../reducer_experiments/results/execution/transformed_data"),
 ) -> Tuple[PandasMultiModalDataset, PandasMultiModalDataset]:
     """This function loads the dataset from the path. In particular, it loads the train and test files from the path:
     results/execution/output_files/reduced_data/{dataset_name}-{reduce_on}.
@@ -502,9 +502,10 @@ def calc_oracle_values(
     classifier: str,
     dataset: str,
     reduce: str,
-    latent_dim: int,
+    latent_dim: int = 24,
     columns_to_remove: List[int] = [],
     normalization: str = None,
+    data_path: str = "../reducer_experiments/results/execution/transformed_data",
 ):
     """This function calculates the oracle values for each feature.
         The oracle values are calculated by removing each feature from the dataset and then training a classifier on the reduced dataset,
@@ -532,7 +533,9 @@ def calc_oracle_values(
 
     accuracies = []
     for dim in range(latent_dim):
-        train, test = load_dataset(dataset, reduce, normalization=normalization)
+        train, test = load_dataset(
+            dataset, reduce, normalization=normalization, path=Path(data_path)
+        )
         if columns_to_remove != []:
             train.X = np.delete(train.X, columns_to_remove, axis=1)
             test.X = np.delete(test.X, columns_to_remove, axis=1)
