@@ -7,6 +7,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.metrics import accuracy_score
 
 from librep.datasets.multimodal.operations import (
     DatasetFitter,
@@ -318,7 +319,7 @@ def calc_lime_values(
 
     Parameters
     ----------
-    model: machine learning model
+    model: machine learning modelra
         The trained model
     test: Dataset
         The test dataset
@@ -564,14 +565,15 @@ def calc_oracle_values(
 
         model = (
             train_rf(train)
-            if classifier == "Radom Forest"
+            if classifier == "Random Forest"
             else train_svm(train)
             if classifier == "SVM"
             else train_knn(train)
             if classifier == "KNN"
             else train_dt(train)
         )
-        accuracy = model.score(test.X, test.y)
+        predictions = model.predict(test.X)
+        accuracy = accuracy_score(test.y, predictions)
         accuracies.append(accuracy)
 
     fis = 1 - np.array(accuracies)
