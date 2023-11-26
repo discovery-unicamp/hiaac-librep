@@ -38,6 +38,7 @@ class TopologicalDimensionalityReduction(Transform):
         self.optimizer_lr = ae_kwargs['optimizer_lr']
         del ae_kwargs['optimizer_weight_decay']
         del ae_kwargs['optimizer_lr']
+        
         # Setting cuda device
         self.cuda_device = torch.device(cuda_device_name)
         self.batch_size = batch_size
@@ -197,6 +198,11 @@ class TopologicalDimensionalityReduction(Transform):
                 self.model_best_state_dict = deepcopy(self.model.state_dict())
                 # Update max_loss
                 loss_threshold = loss_per_epoch
+                # Save the model
+                if self.save_frequency == 'best':
+                    with open(f'model_epoch_{epoch}.pkl', 'wb') as f:
+                        pickle.dump(self.model_best_state_dict, f)
+                
             # If verbose, print the results for the current epoch
             if self.verbose:
                 print(f'Epoch:{epoch+1}, P:{patience_counter}, V Loss:{self.current["val_error"]:.4f}, Loss-ae:{self.current["val_recon_error"]:.4f}, Loss-topo:{self.current["val_topo_error"]:.4f}')
