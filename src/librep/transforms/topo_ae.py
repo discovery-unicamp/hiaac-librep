@@ -22,8 +22,10 @@ class TopologicalDimensionalityReduction(Transform):
         lam=1., patience=None, num_epochs=500, batch_size=64,
         cuda_device_name='cuda:0',
         latent_dim=10,
+        file_to_load=None,
         save_dir='data/', save_tag=0, save_frequency=None, verbose=False
     ):
+        self.file_to_load = file_to_load
         self.save_dir = save_dir
         self.save_tag = save_tag
         self.save_frequency = save_frequency
@@ -126,7 +128,13 @@ class TopologicalDimensionalityReduction(Transform):
             autoencoder_model=self.model_name,
             lam=self.model_lambda, ae_kwargs=self.ae_kwargs
         )
-        # self.model_best_state_dict = deepcopy(self.model.state_dict())
+        if self.file_to_load:
+            file_handler = open(self.file_to_load, 'rb')
+            model_state_dict = pickle.load(file_handler)
+            file_handler.close()
+            self.model.load_state_dict(model_state_dict)
+            self.model.eval()
+            return
         self.model = self.model.to(self.cuda_device)
         # Optimizer
         # self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
@@ -354,6 +362,7 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
                  batch_size=64,
                  cuda_device_name='cuda:0',
                  extra_properties={},
+                 file_to_load=None,
                  save_dir='data/', save_tag=0, save_frequency=None):
         ae_kwargs = {
             'latent_dim': latent_dim,
@@ -370,6 +379,7 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
             batch_size=batch_size,
             cuda_device_name=cuda_device_name,
             latent_dim=latent_dim,
+            file_to_load=file_to_load,
             save_dir=save_dir,
             save_tag=save_tag,
             save_frequency=save_frequency
