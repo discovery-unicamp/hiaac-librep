@@ -134,6 +134,7 @@ class TopologicalDimensionalityReduction(Transform):
             file_handler.close()
             self.model.load_state_dict(model_state_dict)
             self.model.eval()
+            self.model = self.model.to(self.cuda_device)
             return
         self.model = self.model.to(self.cuda_device)
         # Optimizer
