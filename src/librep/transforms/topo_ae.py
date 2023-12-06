@@ -213,7 +213,7 @@ class TopologicalDimensionalityReduction(Transform):
                 # Save the model
                 if self.save_frequency == 'best':
                     file_path = os.path.abspath(f'{self.save_dir}/{self.save_tag}_epoch_{epoch}.pkl')
-                    print('Saving model in', file_path)
+                    print('Saving model in', file_path, 'does it exists?', os.path.exists(file_path))
                     with open(file_path, 'wb') as f:
                         pickle.dump(self.model_best_state_dict, f)
                 
