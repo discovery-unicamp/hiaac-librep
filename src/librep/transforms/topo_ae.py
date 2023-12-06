@@ -212,7 +212,9 @@ class TopologicalDimensionalityReduction(Transform):
                 loss_threshold = loss_per_epoch
                 # Save the model
                 if self.save_frequency == 'best':
-                    with open(f'{self.save_dir}/{self.save_tag}_epoch_{epoch}.pkl', 'wb') as f:
+                    file_path = os.path.abspath(f'{self.save_dir}/{self.save_tag}_epoch_{epoch}.pkl')
+                    print('Saving model in', file_path)
+                    with open(file_path, 'wb') as f:
                         pickle.dump(self.model_best_state_dict, f)
                 
             # If verbose, print the results for the current epoch
