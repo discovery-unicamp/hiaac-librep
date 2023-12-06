@@ -13,6 +13,7 @@ import pickle
 import shutil
 from copy import deepcopy
 from torch.utils.data import TensorDataset, DataLoader
+import os
 
 
 class TopologicalDimensionalityReduction(Transform):
@@ -166,6 +167,8 @@ class TopologicalDimensionalityReduction(Transform):
         self.val_topo_error = []
         # Setting cuda
         # cuda0 = torch.device('cuda:0')
+        
+        print('CURDIR', os.path.abspath(os.path.curdir))
         
         for epoch in tqdm(range(self.num_epochs)):
             patience_counter += 1
