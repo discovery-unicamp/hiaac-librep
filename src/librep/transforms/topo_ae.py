@@ -20,7 +20,10 @@ class TopologicalDimensionalityReduction(Transform):
 
     def __init__(
         self, ae_model='ConvolutionalAutoencoder', ae_kwargs=None,
-        lam=1., patience=None, num_epochs=500, batch_size=64,
+        lam=1., patience=None,
+        num_epochs=500,
+        min_epochs=100,
+        batch_size=64,
         cuda_device_name='cuda:0',
         latent_dim=10,
         file_to_load=None,
@@ -32,6 +35,7 @@ class TopologicalDimensionalityReduction(Transform):
         self.save_frequency = save_frequency
         self.patience = patience
         self.num_epochs = num_epochs
+        self.min_epochs = min_epochs
         self.model_name = ae_model
         self.model_lambda = lam
         self.model_latent_dim = latent_dim
@@ -221,11 +225,11 @@ class TopologicalDimensionalityReduction(Transform):
                 print(f'Epoch:{epoch+1}, P:{patience_counter}, V Loss:{self.current["val_error"]:.4f}, Loss-ae:{self.current["val_recon_error"]:.4f}, Loss-topo:{self.current["val_topo_error"]:.4f}')
                 print(f'Epoch:{epoch+1}, P:{patience_counter}, T Loss:{self.current["train_error"]:.4f}, Loss-ae:{self.current["train_recon_error"]:.4f}, Loss-topo:{self.current["train_topo_error"]:.4f}')
             # Handle patience
-            if self.patience and patience_counter > self.patience:
+            if epoch > self.min_epochs and self.patience and patience_counter > self.patience:
                 break
         self.model.load_state_dict(self.model_best_state_dict)
         if self.save_frequency:
-            with open(f'{self.save_dir}/{self.save_tag}_history.pkl', 'wb') as f:
+            with open(f'{self.save_dir}/{self.save_tag}_history.sml', 'wb') as f:
                 pickle.dump(self.history, f)
 
     def plot_training(self, title_plot=None):
@@ -366,6 +370,7 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
                  model_lambda=1,
                  patience=None,
                  num_epochs=2000,
+                 min_epochs=100,
                  latent_dim=2,
                  batch_size=64,
                  cuda_device_name='cuda:0',
@@ -384,6 +389,7 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
             lam=model_lambda,
             patience=patience,
             num_epochs=num_epochs,
+            min_epochs=min_epochs,
             batch_size=batch_size,
             cuda_device_name=cuda_device_name,
             latent_dim=latent_dim,
