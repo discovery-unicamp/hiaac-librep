@@ -225,7 +225,7 @@ class TopologicalDimensionalityReduction(Transform):
                 print(f'Epoch:{epoch+1}, P:{patience_counter}, V Loss:{self.current["val_error"]:.4f}, Loss-ae:{self.current["val_recon_error"]:.4f}, Loss-topo:{self.current["val_topo_error"]:.4f}')
                 print(f'Epoch:{epoch+1}, P:{patience_counter}, T Loss:{self.current["train_error"]:.4f}, Loss-ae:{self.current["train_recon_error"]:.4f}, Loss-topo:{self.current["train_topo_error"]:.4f}')
             # Handle patience
-            if epoch > self.min_epochs and self.patience and patience_counter > self.patience:
+            if epoch >= self.min_epochs and self.patience and patience_counter > self.patience:
                 break
         self.model.load_state_dict(self.model_best_state_dict)
         if self.save_frequency:
