@@ -61,6 +61,8 @@ class FFT(InvertibleTransform):
             data = fftpack.fft(data)
             if self.absolute:
                 data = np.abs(data)
+            else:
+                data = np.real(data)
             if self.centered:
                 data = data[:len(data)//2]
             datas.append(data)
