@@ -144,7 +144,11 @@ class TopologicalDimensionalityReduction(Transform):
         self.model = self.model.to(self.cuda_device)
         # Optimizer
         # self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
-        self.optimizer = Adam(self.model.parameters(), lr=self.optimizer_lr, weight_decay=self.optimizer_weight_decay)
+        self.optimizer = Adam(
+            self.model.parameters()
+            # lr=self.optimizer_lr,
+            # weight_decay=self.optimizer_weight_decay
+            )
         
         # Setting data loaders
         train_data_loader = DataLoader(
