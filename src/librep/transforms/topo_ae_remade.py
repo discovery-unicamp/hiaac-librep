@@ -385,7 +385,7 @@ class TopologicalDimensionalityReductionRemade(Transform):
         self.model.eval()
         reshaped_data = np.reshape(X, self.input_shape)
         in_tensor = torch.tensor(reshaped_data, device=cuda0).float()
-        return self.model.encode(in_tensor).cpu().detach().numpy()
+        return self.model.encoder(in_tensor).cpu().detach().numpy()
     
     def inverse_transform(self, X: ArrayLike):
         # Setting cuda
@@ -393,7 +393,7 @@ class TopologicalDimensionalityReductionRemade(Transform):
         self.model.eval()
         reshaped_data = np.reshape(X, (-1, 1, X.shape[-1]))
         in_tensor = torch.tensor(reshaped_data, device=cuda0).float()
-        decoded = self.model.decode(in_tensor).cpu().detach().numpy()
+        decoded = self.model.decoder(in_tensor).cpu().detach().numpy()
         return np.reshape(decoded, (X.shape[0], -1))
 
     # def transform_and_back(self, X: ArrayLike, plot_function):

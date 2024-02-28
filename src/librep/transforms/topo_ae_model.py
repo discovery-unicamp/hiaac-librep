@@ -116,16 +116,22 @@ class ConvTAEModule(nn.Module):
             # Adding ReLU
             encoder_layers.append(nn.ReLU())
         connection_to_linear = current_input_size[0]*current_input_size[1]
+        print('\nSIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         # Adding the "View" view
-        encoder_layers.append(View((-1, connection_to_linear)))
+        view_layer = View((-1, connection_to_linear))
+        test_data = view_layer(test_data)
+        print('SIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
+        encoder_layers.append(view_layer)
         # Adding the linear layers
         dimensions = np.linspace(connection_to_linear, ae_encoding_size, num_fc_layers+2).round().astype(int)
         for index, dim in enumerate(dimensions[:-1]):
             layer = nn.Linear(dim, dimensions[index+1])
+            test_data = layer(test_data)
             encoder_layers.append(layer)
             encoder_layers.append(nn.ReLU())
         # Delete the last ReLU()
         encoder_layers.pop()
+        print('LATENT', test_data.size(), 'DIMENSIONS', dimensions, '\n')
         # Building the encoder
         self.encoder = nn.Sequential(*encoder_layers)
         # --------------------------------------------------------------
@@ -136,12 +142,17 @@ class ConvTAEModule(nn.Module):
         dimensions = dimensions[::-1]
         for index, dim in enumerate(dimensions[:-1]):
             layer = nn.Linear(dim, dimensions[index+1])
+            test_data = layer(test_data)
             decoder_layers.append(layer)
             decoder_layers.append(nn.ReLU())
+        print('AFTER LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         # Adding the "View" view before the last ReLU()
         if num_conv_layers != 0:
             last_relu = decoder_layers.pop()
-            decoder_layers.append(View((-1, current_input_size[0], current_input_size[1])))
+            view_layer = View((-1, current_input_size[0], current_input_size[1]))
+            test_data = view_layer(test_data)
+            print('AFTER VIEW', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear, '\n')
+            decoder_layers.append(view_layer)
             decoder_layers.append(last_relu)
         # Adding the deconv layers from the temporal array
         for layer in temporal_decoder_layers[::-1]:
