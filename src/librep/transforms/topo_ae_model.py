@@ -63,6 +63,7 @@ class ConvTAEModule(nn.Module):
         encoder_layers = []
         temporal_decoder_layers = []
         for i in conv_channels_sequences[num_conv_layers]:
+            print('ITERATION', i, 'CURRENT SIZE', current_input_size)
             # If not enough features, skip
             if current_input_size[1] < 3: continue
             # Add a new layer to the encoder
