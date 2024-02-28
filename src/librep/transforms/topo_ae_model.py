@@ -65,7 +65,7 @@ class ConvTAEModule(nn.Module):
         for i in conv_channels_sequences[num_conv_layers]:
             print('ITERATION', i, 'CURRENT SIZE', current_input_size)
             # If not enough features, skip
-            if current_input_size[1] < 3: continue
+            if current_input_size[1] < conv_kernel: continue
             # Add a new layer to the encoder
             conv_layer_to_append = nn.Conv1d(
                 in_channels=in_channels,
@@ -93,7 +93,7 @@ class ConvTAEModule(nn.Module):
             current_input_size = test_data.size()
             in_channels = test_data.size(0)
             # If not enough features, skip
-            if current_input_size[1] < 3: continue
+            if current_input_size[1] < pooling_kernel: continue
             # Add a pooling layer to the encoder
             if pooling_after != 'none':    
                 poolings = {
