@@ -155,8 +155,12 @@ class ConvTAEModule(nn.Module):
             decoder_layers.append(view_layer)
             decoder_layers.append(last_relu)
         # Adding the deconv layers from the temporal array
+        print('\nTESTING CONVTRANS1D - START')
         for layer in temporal_decoder_layers[::-1]:
+            test_data = layer(test_data)
+            print('AFTER A CONVTRANS1D', test_data.size())
             decoder_layers.append(layer)
+        print('TESTING CONVTRANS1D - END')
         # Building the decoder
         self.decoder = nn.Sequential(*decoder_layers)
         print(self.encoder, '\n')
