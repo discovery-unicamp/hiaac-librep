@@ -82,7 +82,8 @@ class ConvTAEModule(nn.Module):
                 kernel_size=conv_kernel,
                 stride=conv_stride,
                 padding=conv_padding,
-                groups=conv_groups
+                groups=conv_groups,
+                output_padding=1
             )
             temporal_decoder_layers.append(nn.ReLU())
             temporal_decoder_layers.append(deconv_layer_to_append)
