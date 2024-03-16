@@ -82,6 +82,12 @@ class ConvTAEModule(nn.Module):
                 groups=conv_groups
             )
             encoder_layers.append(conv_layer_to_append)
+            
+            temporal_decoder_layers.append(nn.ReLU())
+            # Testing the conv layer
+            test_data = torch.randn(current_input_size)
+            test_data = conv_layer_to_append(test_data)
+            output_padding = current_input_size[-1] + 2*conv_padding - conv_kernel - (test_data.size()[-1]-1)*conv_stride
             deconv_layer_to_append = nn.ConvTranspose1d(
                 in_channels=i,
                 out_channels=in_channels,
@@ -89,15 +95,9 @@ class ConvTAEModule(nn.Module):
                 stride=conv_stride,
                 padding=conv_padding,
                 groups=conv_groups,
-                output_padding=0
+                output_padding=output_padding
             )
-            temporal_decoder_layers.append(nn.ReLU())
             temporal_decoder_layers.append(deconv_layer_to_append)
-            # Testing the conv layer
-            test_data = torch.randn(current_input_size)
-            test_data = conv_layer_to_append(test_data)
-            output_padding = current_input_size[-1] + 2*conv_padding - conv_kernel - (test_data.size()[-1]-1)*conv_stride
-            deconv_layer_to_append.output_padding = output_padding
             # sizes_to_compare.append(test_data.size())
             # Update values
             current_input_size = test_data.size()
