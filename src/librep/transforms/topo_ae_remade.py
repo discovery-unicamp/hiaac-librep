@@ -31,6 +31,7 @@ class TopologicalDimensionalityReductionRemade(Transform):
         ae_conv_pooling_kernel=2,
         ae_conv_pooling_stride=2,
         ae_conv_groups=1,
+        ae_dropout=0.2,
         # Latent dimension
         ae_encoding_size=2,
         # Training
@@ -56,6 +57,7 @@ class TopologicalDimensionalityReductionRemade(Transform):
         self.ae_conv_pooling_stride = ae_conv_pooling_stride
         self.ae_conv_groups = ae_conv_groups
         self.ae_encoding_size = ae_encoding_size
+        self.ae_dropout = ae_dropout
         # ------------------------------
 
         self.file_to_load = file_to_load
@@ -185,6 +187,7 @@ class TopologicalDimensionalityReductionRemade(Transform):
                 'ae_conv_pooling_stride': self.ae_conv_pooling_stride,
                 'ae_conv_groups': self.ae_conv_groups,
                 'ae_encoding_size': self.ae_encoding_size,
+                'ae_dropout': self.ae_dropout,
                 'input_channels': ae_input_dims[0],
                 'input_size': ae_input_dims
             }

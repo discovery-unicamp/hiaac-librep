@@ -31,6 +31,7 @@ class ConvTAEModule(nn.Module):
 
 
     def create_model(self, info):
+        dropout = info['ae_dropout'] if 'ae_dropout' in info else 0
         num_conv_layers = info['ae_conv_num'] if 'ae_conv_num' in info else 0
         # last_conv_channel = info['ae_last_cl_size']
         conv_kernel = info['ae_conv_kernel'] if 'ae_conv_kernel' in info else 3
@@ -126,6 +127,7 @@ class ConvTAEModule(nn.Module):
                 in_channels = test_data.size(0)
             # Adding ReLU
             encoder_layers.append(nn.ReLU())
+            encoder_layers.append(nn.Dropout(dropout))
         connection_to_linear = current_input_size[0]*current_input_size[1]
         print('\nSIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         # Adding the "View" view
