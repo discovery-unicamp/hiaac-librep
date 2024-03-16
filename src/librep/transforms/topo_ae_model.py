@@ -47,7 +47,12 @@ class ConvTAEModule(nn.Module):
         # FC related
         num_fc_layers = info['ae_fc_num'] if 'ae_fc_num' in info else 0
         # num_fc_layers = num_fc_layers if num_conv_layers > 0 else 1
-        # Porque pasar de 360 a 0 no cuenta como layer
+        # Comentado porque pasar de 360 a 0 no cuenta como layer
+        # DECODER RELATED
+        # decoder_fc_layers = max(0, num_fc_layers-1)
+        # decoder_conv_layers = max(0, num_conv_layers-1)
+
+
         # Defining possible channel sequences, depending on the number of conv layers
         
         # --------------------------------------------------------------
@@ -83,7 +88,7 @@ class ConvTAEModule(nn.Module):
                 stride=conv_stride,
                 padding=conv_padding,
                 groups=conv_groups,
-                output_padding=1
+                output_padding=1 if conv_padding > 0 else 0
             )
             temporal_decoder_layers.append(nn.ReLU())
             temporal_decoder_layers.append(deconv_layer_to_append)
