@@ -143,7 +143,9 @@ class ConvTAEModule(nn.Module):
             # sizes_to_compare.append(test_data.size())
             encoder_layers.append(layer)
             encoder_layers.append(nn.ReLU())
+            encoder_layers.append(nn.Dropout(dropout))
         # Delete the last ReLU()
+        encoder_layers.pop()
         encoder_layers.pop()
         print('LATENT', test_data.size(), 'DIMENSIONS', dimensions, '\n')
         # Building the encoder
@@ -160,9 +162,11 @@ class ConvTAEModule(nn.Module):
             test_data = layer(test_data)
             decoder_layers.append(layer)
             decoder_layers.append(nn.ReLU())
+            decoder_layers.append(nn.Dropout(dropout))
         print('AFTER LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         # Adding the "View" view before the last ReLU()
         if num_conv_layers != 0:
+            decoder_layers.pop()
             last_relu = decoder_layers.pop()
             view_layer = View((-1, current_input_size[0], current_input_size[1]))
             test_data = view_layer(test_data)
