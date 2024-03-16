@@ -58,7 +58,7 @@ class ConvTAEModule(nn.Module):
         # --------------------------------------------------------------
         # -------------------- BUILDING THE ENCODER --------------------
         # --------------------------------------------------------------
-        sizes_to_compare = []
+        # sizes_to_compare = []
         conv_channels_sequences = {
             0: [],
             1: [256],
@@ -89,14 +89,16 @@ class ConvTAEModule(nn.Module):
                 stride=conv_stride,
                 padding=conv_padding,
                 groups=conv_groups,
-                output_padding=(current_input_size[-1]-conv_stride)%2
+                output_padding=0
             )
             temporal_decoder_layers.append(nn.ReLU())
             temporal_decoder_layers.append(deconv_layer_to_append)
             # Testing the conv layer
             test_data = torch.randn(current_input_size)
             test_data = conv_layer_to_append(test_data)
-            sizes_to_compare.append(test_data.size())
+            output_padding = current_input_size[-1] + 2*conv_padding - conv_kernel - (test_data.size()[-1]-1)*conv_stride
+            deconv_layer_to_append.output_padding = output_padding
+            # sizes_to_compare.append(test_data.size())
             # Update values
             current_input_size = test_data.size()
             in_channels = test_data.size(0)
@@ -118,7 +120,7 @@ class ConvTAEModule(nn.Module):
                 temporal_decoder_layers.append(unpooling_to_append)
                 # Testing the pooling
                 test_data = pooling_to_append(test_data)
-                sizes_to_compare.append(test_data.size())
+                # sizes_to_compare.append(test_data.size())
                 # Update values
                 current_input_size = test_data.size()
                 in_channels = test_data.size(0)
@@ -136,7 +138,7 @@ class ConvTAEModule(nn.Module):
         for index, dim in enumerate(dimensions[:-1]):
             layer = nn.Linear(dim, dimensions[index+1])
             test_data = layer(test_data)
-            sizes_to_compare.append(test_data.size())
+            # sizes_to_compare.append(test_data.size())
             encoder_layers.append(layer)
             encoder_layers.append(nn.ReLU())
         # Delete the last ReLU()
@@ -144,7 +146,7 @@ class ConvTAEModule(nn.Module):
         print('LATENT', test_data.size(), 'DIMENSIONS', dimensions, '\n')
         # Building the encoder
         self.encoder = nn.Sequential(*encoder_layers)
-        print(sizes_to_compare, '\n')
+        # print(sizes_to_compare, '\n')
         # --------------------------------------------------------------
         # -------------------- BUILDING THE DECODER --------------------
         # --------------------------------------------------------------
