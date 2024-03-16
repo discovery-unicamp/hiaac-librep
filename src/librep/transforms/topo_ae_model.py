@@ -164,7 +164,7 @@ class ConvTAEModule(nn.Module):
         print('\nTESTING CONVTRANS1D - START')
         for layer in temporal_decoder_layers[::-1]:
             test_data = layer(test_data)
-            print('AFTER A CONVTRANS1D', test_data.size())
+            print('AFTER A CONVTRANS1D', test_data.size(), layer)
             decoder_layers.append(layer)
         print('TESTING CONVTRANS1D - END')
         # Building the decoder
