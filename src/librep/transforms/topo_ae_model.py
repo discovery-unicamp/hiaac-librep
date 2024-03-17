@@ -69,6 +69,7 @@ class ConvTAEModule(nn.Module):
         }
         encoder_layers = []
         temporal_decoder_layers = []
+        test_data = torch.randn(current_input_size)
         for i in conv_channels_sequences[num_conv_layers]:
             print('ITERATION', i, 'CURRENT SIZE', current_input_size)
             # If not enough features, skip
@@ -86,7 +87,6 @@ class ConvTAEModule(nn.Module):
             
             temporal_decoder_layers.append(nn.ReLU())
             # Testing the conv layer
-            test_data = torch.randn(current_input_size)
             test_data = conv_layer_to_append(test_data)
             output_padding = current_input_size[-1] + 2*conv_padding - conv_kernel - (test_data.size()[-1]-1)*conv_stride
             deconv_layer_to_append = nn.ConvTranspose1d(
