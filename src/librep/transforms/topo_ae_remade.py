@@ -115,7 +115,10 @@ class TopologicalDimensionalityReductionRemade(Transform):
                 loss, reconst_loss, topo_loss = self.model(inputs)
             cumulative_loss += loss.item() * inputs.size(0)
             cumulative_ae_loss += reconst_loss.item() * inputs.size(0)
-            cumulative_topo_loss += topo_loss.item() * inputs.size(0)
+            if self.ae_topo_lambda > 0:
+                cumulative_topo_loss += topo_loss.item() * inputs.size(0)
+            else:
+                cumulative_topo_loss = 0
             epoch_loss_counter += 1
         return (
             cumulative_loss / epoch_loss_counter,
