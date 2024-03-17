@@ -130,11 +130,12 @@ class ConvTAEModule(nn.Module):
             encoder_layers.append(nn.Dropout(dropout))
         connection_to_linear = current_input_size[0]*current_input_size[1]
         print('\nSIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
-        # Adding the "View" view
-        view_layer = View((-1, connection_to_linear))
-        test_data = view_layer(test_data)
-        print('SIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
-        encoder_layers.append(view_layer)
+        if num_conv_layers != 0:
+            # Adding the "View" view
+            view_layer = View((-1, connection_to_linear))
+            test_data = view_layer(test_data)
+            print('SIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
+            encoder_layers.append(view_layer)
         # Adding the linear layers
         dimensions = np.linspace(connection_to_linear, ae_encoding_size, num_fc_layers+2).round().astype(int)
         for index, dim in enumerate(dimensions[:-1]):
