@@ -129,6 +129,7 @@ class ConvTAEModule(nn.Module):
             # Adding ReLU
             encoder_layers.append(nn.ReLU())
             encoder_layers.append(nn.Dropout(dropout))
+        print('AFTER CONV', test_data.size(), 'CURRENT INPUT SIZE', current_input_size)
         connection_to_linear = current_input_size[0]*current_input_size[1]
         print('\nSIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         # if num_conv_layers != 0:
