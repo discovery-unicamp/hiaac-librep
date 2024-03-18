@@ -167,6 +167,7 @@ class ConvTAEModule(nn.Module):
             decoder_layers.append(layer)
             decoder_layers.append(nn.ReLU())
             decoder_layers.append(nn.Dropout(dropout))
+        print('DECODER LAYERS', decoder_layers, '\n')
         # Delete the last Dropout()
         decoder_layers.pop()
         print('AFTER LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
