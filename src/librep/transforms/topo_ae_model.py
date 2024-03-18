@@ -11,6 +11,7 @@ class View(nn.Module):
         self.shape = shape
 
     def forward(self, x):
+        print('VIEW-FORWARD', x.size(), self.shape)
         return x.view(*self.shape)
 
 
