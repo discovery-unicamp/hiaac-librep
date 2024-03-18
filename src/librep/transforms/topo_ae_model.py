@@ -11,7 +11,7 @@ class View(nn.Module):
         self.shape = shape
 
     def forward(self, x):
-        print('VIEW-FORWARD', x.size(), self.shape)
+        # print('VIEW-FORWARD', x.size(), self.shape)
         return x.view(*self.shape)
 
 
@@ -242,9 +242,9 @@ class ConvTAEModule(nn.Module):
         return topo_error
     
     def forward(self, x):
-        print('FORWARD', x.size())
+        # print('FORWARD', x.size())
         latent = self.encoder(x)
-        print('LATENT', latent.size())
+        # print('LATENT', latent.size())
         x_reconst = self.decoder(latent)
         reconst_error = self.reconst_error(x, x_reconst)
         final_error = reconst_error
