@@ -72,7 +72,7 @@ class ConvTAEModule(nn.Module):
         temporal_decoder_layers = []
         test_data = torch.randn(current_input_size)
         for i in conv_channels_sequences[num_conv_layers]:
-            print('ITERATION', i, 'CURRENT SIZE', current_input_size)
+            # print('ITERATION', i, 'CURRENT SIZE', current_input_size)
             # If not enough features, skip
             if current_input_size[1] < conv_kernel: continue
             # Add a new layer to the encoder
@@ -129,14 +129,14 @@ class ConvTAEModule(nn.Module):
             # Adding ReLU
             encoder_layers.append(nn.ReLU())
             encoder_layers.append(nn.Dropout(dropout))
-        print('AFTER CONV', test_data.size(), 'CURRENT INPUT SIZE', current_input_size)
+        # print('AFTER CONV', test_data.size(), 'CURRENT INPUT SIZE', current_input_size)
         connection_to_linear = current_input_size[0]*current_input_size[1]
-        print('\nSIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
+        # print('\nSIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         # if num_conv_layers != 0:
         # Adding the "View" view
         view_layer = View((-1, connection_to_linear))
         test_data = view_layer(test_data)
-        print('SIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
+        # print('SIZE BEFORE LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         encoder_layers.append(view_layer)
         # Adding the linear layers
         dimensions = np.linspace(connection_to_linear, ae_encoding_size, num_fc_layers+2).round().astype(int)
@@ -150,7 +150,7 @@ class ConvTAEModule(nn.Module):
         # Delete the last ReLU()
         encoder_layers.pop()
         encoder_layers.pop()
-        print('LATENT', test_data.size(), 'DIMENSIONS', dimensions, '\n')
+        # print('LATENT', test_data.size(), 'DIMENSIONS', dimensions, '\n')
         # Building the encoder
         self.encoder = nn.Sequential(*encoder_layers)
         # print(sizes_to_compare, '\n')
@@ -163,34 +163,34 @@ class ConvTAEModule(nn.Module):
         for index, dim in enumerate(dimensions[:-1]):
             layer = nn.Linear(dim, dimensions[index+1])
             test_data = layer(test_data)
-            print('AFTER LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
+            # print('AFTER LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
             decoder_layers.append(layer)
             decoder_layers.append(nn.ReLU())
             decoder_layers.append(nn.Dropout(dropout))
-        print('DECODER LAYERS', decoder_layers, '\n')
+        # print('DECODER LAYERS', decoder_layers, '\n')
         # Delete the last Dropout()
         decoder_layers.pop()
-        print('AFTER LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
+        # print('AFTER LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         # Adding the "View" view before the last ReLU()
         if num_conv_layers != 0:
             # decoder_layers.pop()
             last_relu = decoder_layers.pop()
             view_layer = View((-1, current_input_size[0], current_input_size[1]))
             test_data = view_layer(test_data)
-            print('AFTER VIEW', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear, '\n')
+            # print('AFTER VIEW', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear, '\n')
             decoder_layers.append(view_layer)
             decoder_layers.append(last_relu)
         # Adding the deconv layers from the temporal array
-        print('\nTESTING CONVTRANS1D - START')
+        # print('\nTESTING CONVTRANS1D - START')
         for layer in temporal_decoder_layers[::-1]:
             test_data = layer(test_data)
-            print('AFTER A CONVTRANS1D', test_data.size(), layer)
+            # print('AFTER A CONVTRANS1D', test_data.size(), layer)
             decoder_layers.append(layer)
-        print('TESTING CONVTRANS1D - END')
+        # print('TESTING CONVTRANS1D - END')
         # Building the decoder
         self.decoder = nn.Sequential(*decoder_layers)
-        print(self.encoder, '\n')
-        print(self.decoder)
+        # print(self.encoder, '\n')
+        # print(self.decoder)
         self.reconst_error = nn.MSELoss()
         ################################################################
 
