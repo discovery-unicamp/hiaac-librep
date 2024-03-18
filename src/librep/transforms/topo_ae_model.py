@@ -243,6 +243,7 @@ class ConvTAEModule(nn.Module):
     def forward(self, x):
         print('FORWARD', x.size())
         latent = self.encoder(x)
+        print('LATENT', latent.size())
         x_reconst = self.decoder(latent)
         reconst_error = self.reconst_error(x, x_reconst)
         final_error = reconst_error
