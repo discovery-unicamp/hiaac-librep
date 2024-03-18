@@ -185,8 +185,8 @@ class ConvTAEModule(nn.Module):
         # print('TESTING CONVTRANS1D - END')
         # Building the decoder
         self.decoder = nn.Sequential(*decoder_layers)
-        # print(self.encoder, '\n')
-        # print(self.decoder)
+        print(self.encoder, '\n')
+        print(self.decoder)
         self.reconst_error = nn.MSELoss()
         ################################################################
 
