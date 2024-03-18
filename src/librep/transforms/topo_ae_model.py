@@ -173,7 +173,7 @@ class ConvTAEModule(nn.Module):
         print('AFTER LINEAR', test_data.size(), 'CONNECTION TO LINEAR', connection_to_linear)
         # Adding the "View" view before the last ReLU()
         if num_conv_layers != 0:
-            decoder_layers.pop()
+            # decoder_layers.pop()
             last_relu = decoder_layers.pop()
             view_layer = View((-1, current_input_size[0], current_input_size[1]))
             test_data = view_layer(test_data)
