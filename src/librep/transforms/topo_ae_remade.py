@@ -101,7 +101,7 @@ class TopologicalDimensionalityReductionRemade(Transform):
         cumulative_loss = 0
         epoch_loss_counter = 0
         for inputs, _ in data_loader:
-            inputs = inputs.float().to(self.cuda_device)
+            inputs = inputs.to(self.cuda_device)
             if train_mode:
                 self.model.train()
                 # loss, loss_components = self.model(inputs)
@@ -167,9 +167,9 @@ class TopologicalDimensionalityReductionRemade(Transform):
         #     self.ae_kwargs['input_dims'] = (X.shape[1], original_dim)
 
         # Modifying the data into the input_shape
-        x_train = torch.reshape(torch.Tensor(X), self.input_shape)
+        x_train = torch.reshape(torch.Tensor(X), self.input_shape).to(torch.float32)
         y_train = torch.Tensor(np.array(y))
-        x_val = torch.reshape(torch.Tensor(X_val), self.input_shape)
+        x_val = torch.reshape(torch.Tensor(X_val), self.input_shape).to(torch.float32)
         y_val = torch.Tensor(np.array(y_val))
 
         # Initializing all
@@ -390,7 +390,7 @@ class TopologicalDimensionalityReductionRemade(Transform):
         cuda0 = torch.device('cuda:0')
         self.model.eval()
         reshaped_data = np.reshape(X, self.input_shape)
-        in_tensor = torch.tensor(reshaped_data, device=cuda0).float()
+        in_tensor = torch.tensor(reshaped_data, device=cuda0).to(torch.float32)
         return self.model.encoder(in_tensor).cpu().detach().numpy()
     
     def inverse_transform(self, X: ArrayLike):
@@ -398,7 +398,7 @@ class TopologicalDimensionalityReductionRemade(Transform):
         cuda0 = torch.device('cuda:0')
         self.model.eval()
         reshaped_data = np.reshape(X, (-1, 1, X.shape[-1]))
-        in_tensor = torch.tensor(reshaped_data, device=cuda0).float()
+        in_tensor = torch.tensor(reshaped_data, device=cuda0).to(torch.float32)
         decoded = self.model.decoder(in_tensor).cpu().detach().numpy()
         return np.reshape(decoded, (X.shape[0], -1))
 
