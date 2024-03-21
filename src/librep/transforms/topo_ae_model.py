@@ -100,7 +100,7 @@ class ConvTAEModule(nn.Module):
             # If not enough features, skip
             if current_input_size[1] < pooling_kernel: continue
             # Add a pooling layer to the encoder
-            if pooling_after != 'none':    
+            if pooling_type != 'none':    
                 poolings = {
                     'max': nn.MaxPool1d(kernel_size=pooling_kernel, stride=pooling_stride),
                     # 'avg': nn.AvgPool1d(kernel_size=pooling_kernel, stride=pooling_stride)
@@ -109,8 +109,8 @@ class ConvTAEModule(nn.Module):
                     'max': nn.MaxUnpool1d(kernel_size=pooling_kernel, stride=pooling_stride),
                     # 'avg': nn.AvgUnpool1d(kernel_size=pooling_kernel, stride=pooling_stride)
                 }
-                pooling_to_append = poolings[pooling_after]
-                unpooling_to_append = unpoolings[pooling_after]
+                pooling_to_append = poolings[pooling_type]
+                unpooling_to_append = unpoolings[pooling_type]
                 encoder_layers.append(pooling_to_append)
                 temporal_decoder_layers.append(unpooling_to_append)
                 # Testing the pooling
