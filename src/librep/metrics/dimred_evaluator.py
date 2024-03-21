@@ -101,12 +101,12 @@ class DimensionalityReductionQualityReport(CustomMultiEvaluator):
         if self.use_local_property:
             # res = np.mean([drm.Qlocal for drm in drms])
             res = drm.Qlocal
-            result["local property"] = res
+            result["local property"] = float(res)
 
         if self.use_global_property:
             # res = np.mean([drm.Qglobal for drm in drms])
             res = drm.Qglobal
-            result["global property"] = res
+            result["global property"] = float(res)
 
         return result
 

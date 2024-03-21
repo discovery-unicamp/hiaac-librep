@@ -34,7 +34,6 @@ class TopologicalSignatureDistance(nn.Module):
         ##self.signature_calculator = AlephPersistenHomologyCalculation(
         ##    compute_cycles=use_cycles, sort_selected=sort_selected)
         # else:
-        print('Using python to compute signatures')
         self.signature_calculator = PersistentHomologyCalculation()
 
     def _get_pairings(self, distances):

@@ -3,52 +3,53 @@ import torch
 from librep.estimators.ae.torch.models.topological_ae.topological_ae import (
     TopologicallyRegularizedAutoencoder
 )
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from librep.base.transform import Transform
 from librep.config.type_definitions import ArrayLike
 from torch.optim import Adam
 import matplotlib.pyplot as plt
 import pickle
-import random
-import os
 import shutil
-# from torch.nn.parallel import DistributedDataParallel as DDP
-# import torch.distributed as dist
-# import torch.nn.DataParallel
-# torch.nn.DataParallel(model, device_ids=[0, 1, 2])
+from copy import deepcopy
+from torch.utils.data import TensorDataset, DataLoader
+import os
 
 
 class TopologicalDimensionalityReduction(Transform):
 
     def __init__(
         self, ae_model='ConvolutionalAutoencoder', ae_kwargs=None,
-        lam=1., patience=None, num_epochs=500, batch_size=64,
-        # input_shape=(-1, 1, 28, 28),
+        lam=1., patience=None,
+        num_epochs=500,
+        min_epochs=100,
+        batch_size=64,
         cuda_device_name='cuda:0',
-        # start_dim=180,
         latent_dim=10,
-        save_dir='data/', save_tag=0, save_frequency=250, verbose=False
+        file_to_load=None,
+        save_dir='data/', save_tag=0, save_frequency=None, verbose=False
     ):
-        # os.environ['MASTER_ADDR'] = 'localhost'
-        # os.environ['MASTER_PORT'] = '12355'
-        # dist.init_process_group("gloo", rank=0, world_size=6)
+        self.file_to_load = file_to_load
         self.save_dir = save_dir
         self.save_tag = save_tag
         self.save_frequency = save_frequency
         self.patience = patience
         self.num_epochs = num_epochs
+        self.min_epochs = min_epochs
         self.model_name = ae_model
         self.model_lambda = lam
-        # self.model_start_dim = start_dim
         self.model_latent_dim = latent_dim
         self.ae_kwargs = ae_kwargs
         self.verbose = verbose
+        self.optimizer_weight_decay = ae_kwargs['optimizer_weight_decay']
+        self.optimizer_lr = ae_kwargs['optimizer_lr']
+        del ae_kwargs['optimizer_weight_decay']
+        del ae_kwargs['optimizer_lr']
+        
         # Setting cuda device
         self.cuda_device = torch.device(cuda_device_name)
         self.batch_size = batch_size
-        # self.input_shape = input_shape
-        self.max_loss = None
+        
         self.current = {
             'epoch': 0,
             'train_recon_error': None,
@@ -68,14 +69,45 @@ class TopologicalDimensionalityReduction(Transform):
             'val_topo_error': [],
             'val_error': []
         }
+    
+    def __one_epoch(self, data_loader: DataLoader, train_mode=True):
+        cumulative_ae_loss = 0
+        cumulative_topo_loss = 0
+        cumulative_loss = 0
+        epoch_loss_counter = 0
+        for inputs, _ in data_loader:
+            inputs = inputs.float().to(self.cuda_device)
+            if train_mode:
+                self.model.train()
+                loss, loss_components = self.model(inputs)
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+            else:
+                self.model.eval()
+                loss, loss_components = self.model(inputs)
+            cumulative_loss += loss.item() * inputs.size(0)
+            cumulative_ae_loss += loss_components['loss.autoencoder'].item() * inputs.size(0)
+            cumulative_topo_loss += loss_components['loss.topo_error'].item() * inputs.size(0)
+            epoch_loss_counter += 1
+        return (
+            cumulative_loss / epoch_loss_counter,
+            cumulative_ae_loss / epoch_loss_counter,
+            cumulative_topo_loss / epoch_loss_counter
+        )
+
+
 
     def fit(self, X: ArrayLike, y: ArrayLike = None, X_val: ArrayLike = None, y_val: ArrayLike = None):
+        if X_val is None:
+            X, X_val, y, y_val = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+        
         # Computing input dimensions for the model
         # in the second dim of X.shape
         # ----------------------------------------------
         # When the input is 2d:
         # ----------------------------------------------
-        original_dim = X.shape[1]
+        original_dim = X.shape[-1]
         # self.model_start_dim = original_dim
         # Setting self.input_shape
         self.input_shape = (-1, 1, original_dim)
@@ -86,48 +118,49 @@ class TopologicalDimensionalityReduction(Transform):
         # ----------------------------------------------
         # When the input is 3d (length, dim1, dim2): TODO
         # ----------------------------------------------
-        
+        if len(X.shape) == 3:
+            self.input_shape = (-1, X.shape[1], original_dim)
+            self.ae_kwargs['input_dims'] = (X.shape[1], original_dim)
+
+        # Modifying the data into the input_shape
+        x_train = torch.reshape(torch.Tensor(X), self.input_shape)
+        y_train = torch.Tensor(np.array(y))
+        x_val = torch.reshape(torch.Tensor(X_val), self.input_shape)
+        y_val = torch.Tensor(np.array(y_val))
+
         # Initializing all
         self.model = TopologicallyRegularizedAutoencoder(
             autoencoder_model=self.model_name,
             lam=self.model_lambda, ae_kwargs=self.ae_kwargs
         )
-        self.model.to(self.cuda_device)
+        if self.file_to_load:
+            file_handler = open(self.file_to_load, 'rb')
+            model_state_dict = pickle.load(file_handler)
+            file_handler.close()
+            self.model.load_state_dict(model_state_dict)
+            self.model.eval()
+            self.model = self.model.to(self.cuda_device)
+            return
+        self.model = self.model.to(self.cuda_device)
         # Optimizer
-        self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
+        # self.optimizer = Adam(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
+        self.optimizer = Adam(self.model.parameters(), lr=self.optimizer_lr, weight_decay=self.optimizer_weight_decay)
         
-        # Save file name
-        random_number = random.randint(1000, 9999)
-        best_file_name = '{}_{}_{}_{}'.format(
-            self.model_name, random_number, self.model_lambda, self.save_tag)
-        best_file_name = best_file_name + '.toerase' # custom extension
-        
-        # First assignation
-        train_X = X
-        train_Y = y
-        val_X = X_val
-        val_Y = y_val
-        
-        # If it is None, then update
-        if val_X is None:
-            # Splitting X into train and validation
-            train_X, val_X, train_Y, val_Y = train_test_split(
-                X, y, random_state=0,
-                train_size=.8,
-                stratify=y
-            )
-        train_data_loader = torch.utils.data.DataLoader(
-            dataset=train_X,
+        # Setting data loaders
+        train_data_loader = DataLoader(
+            dataset=TensorDataset(x_train, y_train),
             batch_size=self.batch_size,
-            shuffle=True
+            shuffle=True,
+            # drop_last=True
         )
-        val_data_loader = torch.utils.data.DataLoader(
-            dataset=val_X,
+        val_data_loader = DataLoader(
+            dataset=TensorDataset(x_val, y_val),
             batch_size=self.batch_size,
-            shuffle=True
+            shuffle=True,
+            # drop_last=True
         )
-        patience = self.patience
-        max_loss = self.max_loss
+        patience_counter = 0
+        loss_threshold = np.inf
         # Preparing for plot
         self.train_final_error = []
         self.train_recon_error = []
@@ -138,46 +171,24 @@ class TopologicalDimensionalityReduction(Transform):
         self.val_topo_error = []
         # Setting cuda
         # cuda0 = torch.device('cuda:0')
-        for epoch in range(self.num_epochs):
-            epoch_number = self.current['epoch'] + 1
-            epoch_train_loss = []
-            epoch_train_ae_loss = []
-            epoch_train_topo_error = []
-            epoch_val_loss = []
-            epoch_val_ae_loss = []
-            epoch_val_topo_error = []
-            self.model.train()
-            for data in train_data_loader:
-                # reshaped_data = np.reshape(data, self.input_shape)
-                # in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
-                in_tensor = torch.reshape(data, self.input_shape)
-                in_tensor = in_tensor.to(self.cuda_device)
-                in_tensor = in_tensor.float()
-                loss, loss_components = self.model(in_tensor)
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-                epoch_train_loss.append(loss.item())
-                epoch_train_ae_loss.append(loss_components['loss.autoencoder'].item())
-                epoch_train_topo_error.append(loss_components['loss.topo_error'].item())
-            # Verificar despues self.model()
-            for data in val_data_loader:
-                # reshaped_data = np.reshape(data, self.input_shape)
-                # in_tensor = torch.tensor(reshaped_data, device=self.cuda_device).float()
-                in_tensor = torch.reshape(data, self.input_shape)
-                in_tensor = in_tensor.to(self.cuda_device)
-                in_tensor = in_tensor.float()
-                loss, loss_components = self.model(in_tensor)
-                epoch_val_loss.append(loss.item())
-                epoch_val_ae_loss.append(loss_components['loss.autoencoder'].item())
-                epoch_val_topo_error.append(loss_components['loss.topo_error'].item())
+        
+        print('CURDIR', os.path.abspath(os.path.curdir))
+        
+        for epoch in tqdm(range(self.num_epochs)):
+            patience_counter += 1
+            # Set current values
             self.current['epoch'] = self.current['epoch'] + 1
-            self.current['train_recon_error'] = np.mean(epoch_train_ae_loss)
-            self.current['train_topo_error'] = np.mean(epoch_train_topo_error)
-            self.current['train_error'] = np.mean(epoch_train_loss)
-            self.current['val_recon_error'] = np.mean(epoch_val_ae_loss)
-            self.current['val_topo_error'] = np.mean(epoch_val_topo_error)
-            self.current['val_error'] = np.mean(epoch_val_loss)
+            # Train epoch
+            epoch_loss, epoch_ae_loss, epoch_topo_loss = self.__one_epoch(train_data_loader, train_mode=True)
+            self.current['train_recon_error'] = epoch_ae_loss
+            self.current['train_topo_error'] = epoch_topo_loss
+            self.current['train_error'] = epoch_loss
+            # Validation epoch
+            epoch_loss, epoch_ae_loss, epoch_topo_loss = self.__one_epoch(val_data_loader, train_mode=False)
+            self.current['val_recon_error'] = epoch_ae_loss
+            self.current['val_topo_error'] = epoch_topo_loss
+            self.current['val_error'] = epoch_loss
+            # Set history values
             self.history['epoch'].append(self.current['epoch'])
             self.history['train_recon_error'].append(self.current['train_recon_error'])
             self.history['train_topo_error'].append(self.current['train_topo_error'])
@@ -185,49 +196,42 @@ class TopologicalDimensionalityReduction(Transform):
             self.history['val_recon_error'].append(self.current['val_recon_error'])
             self.history['val_topo_error'].append(self.current['val_topo_error'])
             self.history['val_error'].append(self.current['val_error'])
+            # Set the loss value
             loss_per_epoch = self.current['val_error']
-
-            # Check for save the BEST version every "n" epochs: save frequency
-            # assuming there is already a best version called "best_file_name"
-            if epoch_number % self.save_frequency == 0:
-                self.partial_save(reuse_file=best_file_name)
-                # Copy the file and rename it:
-                # shutil.copyfile(self.save_dir + best_file_name, self.save_dir + '')
+            # ae_loss_per_epoch = self.current['val_recon_error']
+            # topo_loss_per_epoch = self.current['val_topo_error']
             
-            # Update max loss allowed: if None, then copy from loss_per_epoch
-            # print(max_loss)
-            max_loss = max_loss or loss_per_epoch
-            # If this model beats the better found until now:
-            if loss_per_epoch < max_loss:
-                # print('MAXLOSS update from', max_loss, 'to', loss_per_epoch, random_number)
-                # If LAST model was already created, delete it
-                if os.path.exists(best_file_name):
-                    os.remove(best_file_name)
-                # Save the new LAST model
-                self.partial_save(name=best_file_name)
-                # Update max_loss
-                max_loss = loss_per_epoch
+            # Check if loss is nan
+            if np.isnan(loss_per_epoch):
                 if self.verbose:
-                    print('Best result found at', self.current['epoch'])
-            loss_per_epoch = np.mean(epoch_val_ae_loss) + np.mean(epoch_val_topo_error)
-            ae_loss_per_epoch = np.mean(epoch_val_ae_loss)
-            topo_loss_per_epoch = np.mean(epoch_val_topo_error)
+                    print('Loss is nan, stopping the training')
+                break
+
+            # If this model beats the better found until now:
+            if loss_per_epoch < loss_threshold:
+                patience_counter = 0
+                # Save the model_state
+                self.model_best_state_dict = deepcopy(self.model.state_dict())
+                # Update max_loss
+                loss_threshold = loss_per_epoch
+                # Save the model
+                if self.save_frequency == 'best':
+                    os.makedirs(self.save_dir, exist_ok=True)
+                    with open(f'{self.save_dir}/{self.save_tag}_epoch_{epoch}.pkl', 'wb') as f:
+                        pickle.dump(self.model_best_state_dict, f)
+                
+            # If verbose, print the results for the current epoch
             if self.verbose:
-                print(f'Epoch:{epoch+1}, P:{patience}, Loss:{loss_per_epoch:.4f}, Loss-ae:{ae_loss_per_epoch:.4f}, Loss-topo:{topo_loss_per_epoch:.4f}')
-            if self.patience:
-                if max_loss < loss_per_epoch:
-                    if patience == 0:
-                        break
-                    patience -= 1
-                else:
-                    max_loss = loss_per_epoch
-                    patience = self.patience
-        # Update to the best version found
-        self.partial_load(name=best_file_name)
-        # Erase the temporal file
-        os.remove(self.save_dir + best_file_name)
-        return self
-    
+                print(f'Epoch:{epoch+1}, P:{patience_counter}, V Loss:{self.current["val_error"]:.4f}, Loss-ae:{self.current["val_recon_error"]:.4f}, Loss-topo:{self.current["val_topo_error"]:.4f}')
+                print(f'Epoch:{epoch+1}, P:{patience_counter}, T Loss:{self.current["train_error"]:.4f}, Loss-ae:{self.current["train_recon_error"]:.4f}, Loss-topo:{self.current["train_topo_error"]:.4f}')
+            # Handle patience
+            if epoch >= self.min_epochs and self.patience and patience_counter > self.patience:
+                break
+        self.model.load_state_dict(self.model_best_state_dict)
+        if self.save_frequency:
+            with open(f'{self.save_dir}/{self.save_tag}_history.sml', 'wb') as f:
+                pickle.dump(self.history, f)
+
     def plot_training(self, title_plot=None):
         fig, ax = plt.subplots(figsize=(10,10))
         ax.set_title('Training')
@@ -365,32 +369,31 @@ class ConvTAETransform(TopologicalDimensionalityReduction):
                  model_name='ConvTAE_def',
                  model_lambda=1,
                  patience=None,
-                 num_epochs=175,
-                #  start_dim=180,
+                 num_epochs=2000,
+                 min_epochs=100,
                  latent_dim=2,
                  batch_size=64,
                  cuda_device_name='cuda:0',
                  extra_properties={},
-                 save_dir='data/', save_tag=0, save_frequency=250):
+                 file_to_load=None,
+                 save_dir='data/', save_tag=0, save_frequency=None):
         ae_kwargs = {
-            # 'input_dims': (1, start_dim),
-            'latent_dim': latent_dim
+            'latent_dim': latent_dim,
+            'optimizer_weight_decay': 0,
+            'optimizer_lr': 1e-5
         }
         ae_kwargs.update(extra_properties)
-        # input_shape = (-1, 1, start_dim)
-        # if ae_kwargs['num_CL'] == 0:
-            # input_shape = (-1, start_dim)
         super().__init__(
             ae_model=model_name,
             ae_kwargs=ae_kwargs,
             lam=model_lambda,
             patience=patience,
             num_epochs=num_epochs,
+            min_epochs=min_epochs,
             batch_size=batch_size,
-            # input_shape=input_shape,
             cuda_device_name=cuda_device_name,
-            # start_dim=start_dim,
             latent_dim=latent_dim,
+            file_to_load=file_to_load,
             save_dir=save_dir,
             save_tag=save_tag,
             save_frequency=save_frequency
